@@ -13,7 +13,7 @@ export default function RepoCard({ repo, onScan }: RepoCardProps) {
 
   return (
     <div
-      className="relative flex flex-col overflow-hidden rounded-xl p-5 cursor-pointer transition-all duration-200 h-full"
+      className="relative flex flex-col overflow-hidden rounded-xl p-5 transition-all duration-200 h-full"
       style={{
         background: 'var(--bg1)',
         border: `1px solid ${hovered ? 'var(--border-hover)' : 'var(--border)'}`,

@@ -17,11 +17,11 @@ export default function FindingCard({ finding }: { finding: Finding }) {
 
   return (
     <div
-      className="rounded-xl px-6 py-5 cursor-pointer transition-all duration-200"
+      className="group rounded-xl px-6 py-5 cursor-pointer transition-all duration-200"
       style={{ background: 'var(--bg1)', border: '1px solid var(--border)' }}
       onClick={() => setExpanded(!expanded)}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-hover)' }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '' }}>
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(150, 150, 160, 0.4)' }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}>
 
       <div className="flex items-start gap-4">
         <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ background: style.dot }} />
@@ -39,12 +39,21 @@ export default function FindingCard({ finding }: { finding: Finding }) {
             <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v2H2zm0 4h8v2H2zm0 4h10v2H2z" /></svg>
             {finding.file} · line {finding.line}
           </div>
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
-            <span className="font-mono text-[10px] px-2 py-1 rounded uppercase tracking-wide"
-              style={{ border: '1px solid var(--border)', color: 'var(--text-muted)' }}>{finding.tool}</span>
-            {finding.rule && (
-              <span className="font-mono text-[10px]" style={{ color: 'var(--accent)' }}>{finding.rule}</span>
-            )}
+          <div className="flex items-end justify-between gap-4 mt-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-mono text-[10px] px-2 py-1 rounded uppercase tracking-wide"
+                style={{ border: '1px solid var(--border)', color: 'var(--text-muted)' }}>{finding.tool}</span>
+              {finding.rule && (
+                <span className="font-mono text-[10px]" style={{ color: 'var(--accent)' }}>{finding.rule}</span>
+              )}
+            </div>
+
+            {/* Toggle Icon */}
+            <div className="flex-shrink-0 transition-transform duration-200" style={{ transform: expanded ? 'rotate(180deg)' : 'none', color: 'var(--text-muted)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
           </div>
           {expanded && finding.snippet && (
             <div className="mt-4 px-4 py-3 rounded-lg overflow-x-auto"

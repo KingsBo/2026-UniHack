@@ -15,14 +15,14 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 function getInitialTheme(): Theme {
-  if (typeof window === 'undefined') return 'light'
+  if (typeof window === 'undefined') return 'dark'
   const stored = localStorage.getItem(STORAGE_KEY) as Theme | null
   if (stored === 'dark' || stored === 'light') return stored
-  return 'light'
+  return 'dark'
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('light')
+  const [theme, setThemeState] = useState<Theme>('dark')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {

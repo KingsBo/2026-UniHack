@@ -32,7 +32,7 @@ export default function ResultPage() {
         {/* Back */}
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 font-mono text-[11px] mb-8 transition-colors hover:opacity-80"
+          className="inline-flex items-center gap-1.5 font-mono text-xs mb-8 transition-colors hover:opacity-80"
           style={{ color: 'var(--text-muted)' }}
         >
           ← back to dashboard

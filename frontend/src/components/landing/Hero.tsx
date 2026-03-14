@@ -9,7 +9,7 @@ export default function Hero() {
   const router = useRouter()
 
   return (
-    <section className="flex-1 grid grid-cols-2 gap-28 items-center max-w-6xl mx-auto w-full px-10 py-20 min-h-[calc(100vh-56px)]">
+    <section className="flex-1 grid grid-cols-2 gap-28 items-start max-w-6xl mx-auto w-full px-10 py-20 mt-16 min-h-[calc(100vh-120px)]">
 
       {/* Left */}
       <div className="relative">
@@ -62,7 +62,7 @@ export default function Hero() {
       </div>
 
       {/* Right — Sign in / Register card (auth form) */}
-      <div id="auth-form" className="relative overflow-hidden rounded-2xl px-10 py-14 scroll-mt-24 flex flex-col justify-center min-h-[420px]"
+      <div id="auth-form" className="relative overflow-hidden rounded-2xl px-10 py-14 scroll-mt-24 flex flex-col justify-center transition-all duration-300 ease-in-out -mt-8"
         style={{ background: 'var(--bg1)', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
         {/* Glow */}
         <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full pointer-events-none"
@@ -90,33 +90,18 @@ export default function Hero() {
           ))}
         </div>
 
-        {/* Fields — fixed height so Sign in and Register don't shift the page; Sign in content vertically centered */}
-        <div className={`h-[218px] ${tab === 'signin' ? 'flex flex-col' : ''}`}>
-          {tab === 'signin' ? (
-            <>
-              <div className="flex flex-1 flex-col justify-center space-y-4 min-h-0">
-                <div>
-                  <label className="block font-mono text-[10px] tracking-widest uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Email</label>
-                  <input type="email" placeholder="you@company.com"
-                    className="w-full px-4 py-3 text-sm font-mono rounded-xl outline-none transition-all placeholder:opacity-60"
-                    style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                    onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                    onBlur={(e) => { e.target.style.borderColor = ''; e.target.style.boxShadow = 'none' }} />
-                </div>
-                <div>
-                  <label className="block font-mono text-[10px] tracking-widest uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Password</label>
-                  <input type="password" placeholder="••••••••••"
-                    className="w-full px-4 py-3 text-sm font-mono rounded-xl outline-none transition-all placeholder:opacity-60"
-                    style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                    onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                    onBlur={(e) => { e.target.style.borderColor = ''; e.target.style.boxShadow = 'none' }} />
-                </div>
-              </div>
-              <div className="h-[62px] w-full shrink-0 invisible pointer-events-none select-none" aria-hidden="true" />
-            </>
-          ) : (
-            <div className="space-y-4">
-              <div>
+        {/* Fields */}
+        <div className="flex flex-col">
+          {/* Animated extra field for Register */}
+          <div 
+            className="grid transition-all duration-300 ease-in-out" 
+            style={{ 
+              gridTemplateRows: tab === 'register' ? '1fr' : '0fr',
+              opacity: tab === 'register' ? 1 : 0
+            }}
+          >
+            <div className="overflow-hidden">
+              <div className="pb-4">
                 <label className="block font-mono text-[10px] tracking-widest uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Full name</label>
                 <input type="text" placeholder="Jane Smith"
                   className="w-full px-4 py-3 text-sm font-mono rounded-xl outline-none transition-all"
@@ -124,24 +109,27 @@ export default function Hero() {
                   onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
                   onBlur={(e) => { e.target.style.borderColor = ''; e.target.style.boxShadow = 'none' }} />
               </div>
-              <div>
-                <label className="block font-mono text-[10px] tracking-widest uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Email</label>
-                <input type="email" placeholder="you@company.com"
-                  className="w-full px-4 py-3 text-sm font-mono rounded-xl outline-none transition-all placeholder:opacity-60"
-                  style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                  onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                  onBlur={(e) => { e.target.style.borderColor = ''; e.target.style.boxShadow = 'none' }} />
-              </div>
-              <div>
-                <label className="block font-mono text-[10px] tracking-widest uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Password</label>
-                <input type="password" placeholder="••••••••••"
-                  className="w-full px-4 py-3 text-sm font-mono rounded-xl outline-none transition-all placeholder:opacity-60"
-                  style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                  onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                  onBlur={(e) => { e.target.style.borderColor = ''; e.target.style.boxShadow = 'none' }} />
-              </div>
             </div>
-          )}
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block font-mono text-[10px] tracking-widest uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Email</label>
+              <input type="email" placeholder="you@company.com"
+                className="w-full px-4 py-3 text-sm font-mono rounded-xl outline-none transition-all placeholder:opacity-60"
+                style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                onBlur={(e) => { e.target.style.borderColor = ''; e.target.style.boxShadow = 'none' }} />
+            </div>
+            <div>
+              <label className="block font-mono text-[10px] tracking-widest uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Password</label>
+              <input type="password" placeholder="••••••••••"
+                className="w-full px-4 py-3 text-sm font-mono rounded-xl outline-none transition-all placeholder:opacity-60"
+                style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                onBlur={(e) => { e.target.style.borderColor = ''; e.target.style.boxShadow = 'none' }} />
+            </div>
+          </div>
         </div>
 
         <button onClick={() => router.push('/dashboard')}
