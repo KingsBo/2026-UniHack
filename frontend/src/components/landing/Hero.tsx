@@ -4,19 +4,13 @@ import Link from 'next/link'
 
 export default function Hero() {
   return (
-    <section className="flex-1 grid grid-cols-2 gap-28 items-start max-w-6xl mx-auto w-full px-10 py-20 mt-16 min-h-[calc(100vh-120px)]">
+    <section className="flex-1 grid grid-cols-2 gap-28 items-center max-w-6xl mx-auto w-full px-10 min-h-[calc(100vh-120px)]">
 
       {/* Left */}
       <div className="relative">
         {/* Grid background */}
         <div className="grid-bg absolute inset-[-100px] opacity-[0.06] pointer-events-none" />
 
-        {/* Eyebrow */}
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-7 font-mono text-[11px] tracking-widest"
-          style={{ border: '1px solid var(--border)', color: 'var(--green)' }}>
-          <span className="w-1.5 h-1.5 rounded-full animate-blink" style={{ background: 'var(--green)' }} />
-          Static analysis · Active scanning
-        </div>
 
         {/* Headline */}
         <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight mb-6" style={{ color: 'var(--text-primary)' }}>
@@ -42,12 +36,12 @@ export default function Hero() {
 
         {/* CTAs */}
         <div className="flex items-center gap-3">
-          <Link href="/dashboard"
+          <a href="/api/auth/login"
             className="relative overflow-hidden px-6 py-3 text-xs font-semibold tracking-widest uppercase text-white rounded-lg transition-all hover:-translate-y-px inline-block"
             style={{ background: 'var(--accent)' }}>
             <span className="relative z-10">Start scanning →</span>
             <span className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.15), transparent)' }} />
-          </Link>
+          </a>
           <Link href="/result/demo"
             className="px-6 py-3 text-xs font-medium tracking-widest uppercase rounded-lg transition-all hover:bg-black/5"
             style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-hover)' }}>
@@ -57,11 +51,8 @@ export default function Hero() {
       </div>
 
       {/* Right — GitHub OAuth sign in */}
-      <div id="auth-form" className="relative overflow-hidden rounded-2xl px-10 py-14 scroll-mt-24 flex flex-col justify-center transition-all duration-300 ease-in-out -mt-8"
+      <div id="auth-form" className="relative overflow-hidden rounded-2xl px-10 py-14 scroll-mt-24 flex flex-col justify-center transition-all duration-300 ease-in-out"
         style={{ background: 'var(--bg1)', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-        {/* Glow */}
-        <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(123,110,246,0.12), transparent 70%)' }} />
 
         <h2 className="text-xl font-extrabold tracking-tight mb-1" style={{ color: 'var(--text-primary)' }}>
           Get started

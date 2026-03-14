@@ -52,13 +52,6 @@ export default function Header({ variant = 'landing' }: HeaderProps) {
 
       {/* Right: CTA */}
       <div className="flex justify-end">
-        {variant === 'landing' ? (
-          <span className="relative overflow-hidden px-5 py-2 text-xs font-semibold tracking-widest uppercase text-white rounded-md"
-            style={{ background: 'var(--accent)', pointerEvents: 'none', userSelect: 'none', cursor: 'default' }}>
-            <span className="relative z-10">Get started</span>
-            <span className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.15), transparent)' }} />
-          </span>
-        ) : null}
       </div>
     </header>
   )
