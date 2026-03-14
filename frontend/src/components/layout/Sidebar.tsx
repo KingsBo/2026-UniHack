@@ -44,7 +44,7 @@ export default function Sidebar() {
 
   return (
     <aside className="w-60 flex-shrink-0 flex flex-col gap-1 px-3 py-6 sticky top-14 overflow-y-auto"
-      style={{ background: 'var(--bg1)', borderRight: '1px solid var(--border)', height: 'calc(100vh - 56px)', boxShadow: '1px 0 0 0 var(--border)' }}>
+      style={{ background: 'var(--bg1)', borderRight: '1px solid var(--border)', height: 'calc(100vh - 56px)' }}>
 
       <span className="px-3 pb-1.5 pt-2 text-[10px] font-mono tracking-widest uppercase" style={{ color: 'var(--text-muted)' }}>
         Overview

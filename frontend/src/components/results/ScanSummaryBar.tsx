@@ -38,10 +38,10 @@ export default function ScanSummaryBar({ scan }: { scan: ScanResult }) {
           {SEV_CONFIG.map(({ key, label, color, bg, border }) => {
             const count = countBySeverity(scan.findings, key)
             return (
-              <div key={key} className="flex items-center gap-1.5 px-4 py-2 rounded-lg"
+              <div key={key} className="flex items-center gap-2 px-4 py-2 rounded-lg"
                 style={{ background: bg, border: `1px solid ${border}` }}>
-                <span className="text-sm font-bold font-mono leading-none" style={{ color }}>{count}</span>
-                <span className="text-sm font-bold font-mono leading-none" style={{ color }}>{label}</span>
+                <span className="font-mono text-[11px] font-bold tracking-widest uppercase leading-none" style={{ color }}>{label}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: bg, color }}>{count}</span>
               </div>
             )
           })}

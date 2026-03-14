@@ -21,7 +21,7 @@ export default function DashboardPage() {
     <>
       <div className="px-12 py-10">
         {/* Header */}
-        <div className="mb-9">
+        <div className="mb-[24px]">
           <h1 className="text-2xl font-extrabold tracking-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>
             Your repositories
           </h1>
