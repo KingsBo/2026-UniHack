@@ -1,58 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleAuth } from "google-auth-library";
-
-const GITLEAKS_SERVICE_URL =
-  process.env.GITLEAKS_SERVICE_URL || "http://localhost:3001";
-const TRIVY_SERVICE_URL =
-  process.env.TRIVY_SERVICE_URL || "http://localhost:3002";
-
-let googleAuth: GoogleAuth | null = null;
-function getGoogleAuth(): GoogleAuth | null {
-  if (googleAuth) return googleAuth;
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    googleAuth = new GoogleAuth();
-    return googleAuth;
-  }
-  if (process.env.GCP_SERVICE_ACCOUNT_KEY) {
-    googleAuth = new GoogleAuth({
-      credentials: JSON.parse(process.env.GCP_SERVICE_ACCOUNT_KEY),
-    });
-    return googleAuth;
-  }
-  return null;
-}
-
-async function getAuthHeaders(
-  serviceUrl: string
-): Promise<Record<string, string>> {
-  const auth = getGoogleAuth();
-  if (!auth || !serviceUrl.includes(".run.app")) return {};
-  const client = await auth.getIdTokenClient(serviceUrl);
-  const rawHeaders = await client.getRequestHeaders(serviceUrl);
-  const authorization =
-    rawHeaders instanceof Headers
-      ? rawHeaders.get("Authorization")
-      : (rawHeaders as Record<string, string>).Authorization;
-  return authorization ? { Authorization: authorization } : {};
-}
-
-async function callScanner(serviceUrl: string, body: unknown) {
-  const authHeaders = await getAuthHeaders(serviceUrl);
-
-  const res = await fetch(`${serviceUrl}/scan`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders,
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Scanner returned ${res.status}`);
-  }
-  return res.json();
-}
+import {
+  GITLEAKS_SERVICE_URL,
+  TRIVY_SERVICE_URL,
+  callScanner,
+} from "./shared";
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { owner, repo } = body;
+    const { owner, repo } = body as { owner?: string; repo?: string };
 
     if (!owner || !repo) {
       return NextResponse.json(
@@ -72,11 +23,11 @@ export async function POST(request: NextRequest) {
     }
 
     const repoUrl = `https://github.com/${owner}/${repo}`;
-    const scannerPayload = { repoUrl, token };
+    const payload = { repoUrl, token };
 
     const [gitleaksResult, trivyResult] = await Promise.allSettled([
-      callScanner(GITLEAKS_SERVICE_URL, scannerPayload),
-      callScanner(TRIVY_SERVICE_URL, scannerPayload),
+      callScanner(GITLEAKS_SERVICE_URL, payload),
+      callScanner(TRIVY_SERVICE_URL, payload),
     ]);
 
     return NextResponse.json({
@@ -88,11 +39,11 @@ export async function POST(request: NextRequest) {
       errors: {
         gitleaks:
           gitleaksResult.status === "rejected"
-            ? gitleaksResult.reason?.message
+            ? (gitleaksResult.reason as Error)?.message ?? "Gitleaks failed"
             : null,
         trivy:
           trivyResult.status === "rejected"
-            ? trivyResult.reason?.message
+            ? (trivyResult.reason as Error)?.message ?? "Trivy failed"
             : null,
       },
     });
@@ -105,3 +56,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+

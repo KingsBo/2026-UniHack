@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -15,12 +16,33 @@ type HeaderProps = { variant?: 'landing' | 'app' }
 
 export default function Header({ variant = 'landing' }: HeaderProps) {
   const pathname = usePathname()
+  const [isAuthed, setIsAuthed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const check = async () => {
+      try {
+        const res = await fetch('/api/auth/me')
+        if (!cancelled) {
+          setIsAuthed(res.ok)
+        }
+      } catch {
+        if (!cancelled) setIsAuthed(false)
+      }
+    }
+    void check()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const logoHref = isAuthed ? '/dashboard' : '/'
   return (
     <header className="sticky top-0 z-50 grid grid-cols-3 items-center px-8 h-14"
       style={{ background: 'var(--header-bg)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)' }}>
       {/* Left: Logo */}
       <div className="flex justify-start">
-        <Link href="/" className="flex items-center gap-2.5">
+        <Link href={logoHref} className="flex items-center gap-2.5">
           <LogoMark />
           <span className="text-sm font-bold tracking-widest uppercase" style={{ color: 'var(--text-primary)' }}>Kestrel</span>
         </Link>

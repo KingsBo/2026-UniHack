@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { MOCK_SCAN_HISTORY } from '@/lib/mock-data'
 import type { ScanHistoryEntry, ScanStatus } from '@/types'
@@ -27,6 +27,12 @@ function statusStyle(status: ScanStatus) {
 
 export default function HistoryPage() {
   const [filter, setFilter] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setLoading(false), 500)
+    return () => window.clearTimeout(t)
+  }, [])
   const filtered = MOCK_SCAN_HISTORY.filter((e) =>
     e.repoName.toLowerCase().includes(filter.toLowerCase())
   )
@@ -75,34 +81,53 @@ export default function HistoryPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((entry: ScanHistoryEntry) => {
-              const st = statusStyle(entry.status)
-              return (
-                <tr key={entry.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="py-3 px-5 font-medium" style={{ color: 'var(--text-primary)' }}>{entry.repoName}</td>
-                  <td className="py-3 px-5" style={{ color: 'var(--text-secondary)' }}>{entry.branch}</td>
-                  <td className="py-3 px-5">
-                    <span className="px-2 py-0.5 rounded text-xs capitalize" style={{ background: st.bg, color: st.color }}>
-                      {entry.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-5" style={{ color: 'var(--text-primary)' }}>{entry.findingCount}</td>
-                  <td className="py-3 px-5" style={{ color: 'var(--text-secondary)' }}>{formatDuration(entry.durationMs)}</td>
-                  <td className="py-3 px-5" style={{ color: 'var(--text-muted)' }}>
-                    {entry.completedAt ? new Date(entry.completedAt).toLocaleString() : '—'}
-                  </td>
-                  <td className="py-3 px-5">
-                    <Link
-                      href={entry.id === 'scan-1' ? '/result/demo' : `/result/${entry.id}`}
-                      className="text-xs font-medium"
-                      style={{ color: 'var(--accent)' }}
-                    >
-                      View report →
-                    </Link>
-                  </td>
-                </tr>
-              )
-            })}
+            {loading
+              ? Array.from({ length: 6 }).map((_, idx) => (
+                  <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                    {Array.from({ length: 6 }).map((__ , cellIdx) => (
+                      <td key={cellIdx} className="py-3 px-5">
+                        <div
+                          className="h-3 rounded animate-pulse"
+                          style={{ background: 'var(--bg2)', width: cellIdx === 0 ? '40%' : cellIdx === 5 ? '60%' : '30%' }}
+                        />
+                      </td>
+                    ))}
+                    <td className="py-3 px-5">
+                      <div
+                        className="h-3 w-16 rounded animate-pulse"
+                        style={{ background: 'var(--bg2)' }}
+                      />
+                    </td>
+                  </tr>
+                ))
+              : filtered.map((entry: ScanHistoryEntry) => {
+                  const st = statusStyle(entry.status)
+                  return (
+                    <tr key={entry.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td className="py-3 px-5 font-medium" style={{ color: 'var(--text-primary)' }}>{entry.repoName}</td>
+                      <td className="py-3 px-5" style={{ color: 'var(--text-secondary)' }}>{entry.branch}</td>
+                      <td className="py-3 px-5">
+                        <span className="px-2 py-0.5 rounded text-xs capitalize" style={{ background: st.bg, color: st.color }}>
+                          {entry.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-5" style={{ color: 'var(--text-primary)' }}>{entry.findingCount}</td>
+                      <td className="py-3 px-5" style={{ color: 'var(--text-secondary)' }}>{formatDuration(entry.durationMs)}</td>
+                      <td className="py-3 px-5" style={{ color: 'var(--text-muted)' }}>
+                        {entry.completedAt ? new Date(entry.completedAt).toLocaleString() : '—'}
+                      </td>
+                      <td className="py-3 px-5">
+                        <Link
+                          href={entry.id === 'scan-1' ? '/result/demo' : `/result/${entry.id}`}
+                          className="text-xs font-medium"
+                          style={{ color: 'var(--accent)' }}
+                        >
+                          View report →
+                        </Link>
+                      </td>
+                    </tr>
+                  )
+                })}
           </tbody>
         </table>
       </div>

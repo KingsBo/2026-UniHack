@@ -96,13 +96,55 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {loading && (
-          <div className="py-20 text-center font-mono text-sm" style={{ color: 'var(--text-muted)' }}>
-            Loading repositories...
+        {loading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div
+                key={idx}
+                className="relative flex flex-col overflow-hidden rounded-xl p-5 animate-pulse"
+                style={{
+                  background: 'var(--bg1)',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div
+                    className="w-8 h-8 rounded-lg"
+                    style={{ background: 'var(--bg2)' }}
+                  />
+                  <div
+                    className="h-5 w-12 rounded-full"
+                    style={{ background: 'var(--bg2)' }}
+                  />
+                </div>
+                <div
+                  className="h-4 w-32 rounded mb-2"
+                  style={{ background: 'var(--bg2)' }}
+                />
+                <div
+                  className="h-3 w-40 rounded mb-6"
+                  style={{ background: 'var(--bg2)' }}
+                />
+                <div className="flex items-center gap-4 mb-4">
+                  <div
+                    className="h-3 w-24 rounded"
+                    style={{ background: 'var(--bg2)' }}
+                  />
+                  <div
+                    className="h-3 w-20 rounded"
+                    style={{ background: 'var(--bg2)' }}
+                  />
+                </div>
+                <div
+                  className="mt-auto h-8 w-full rounded-lg"
+                  style={{ background: 'var(--bg2)' }}
+                />
+              </div>
+            ))}
           </div>
         )}
 
-        {error && (
+        {!loading && error && (
           <div className="py-20 text-center font-mono text-sm" style={{ color: '#ef4444' }}>
             {error}
           </div>
@@ -111,7 +153,11 @@ export default function DashboardPage() {
         {!loading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filtered.map((repo) => (
-              <RepoCard key={repo.id} repo={repo} onScan={setScanningRepo} />
+              <RepoCard
+                key={repo.id}
+                repo={repo}
+                onScan={(r) => setScanningRepo(r)}
+              />
             ))}
             {filtered.length === 0 && (
               <div className="col-span-3 py-20 text-center font-mono text-sm" style={{ color: 'var(--text-muted)' }}>

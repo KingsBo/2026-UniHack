@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Repo, ScanResponse } from '@/types'
 
@@ -23,80 +23,137 @@ export default function ScanModal({ repo, onClose }: Props) {
   const [done, setDone] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
   const [scanResult, setScanResult] = useState<ScanResponse | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
 
   const isOpen = !!repo
 
   useEffect(() => {
     if (!repo) return
 
-    const initSteps = INITIAL_STEPS.map((s) => ({ ...s, status: 'pending' as StepStatus }))
-    setSteps(initSteps)
-    setProgress(0)
+    setSteps(
+      INITIAL_STEPS.map((s) => ({
+        ...s,
+        status: s.id === 0 ? 'running' : 'pending',
+      })),
+    )
+    setProgress(15)
     setDone(false)
     setScanError(null)
     setScanResult(null)
 
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    const runScan = async () => {
+    const run = async () => {
       try {
-        setSteps((prev) => prev.map((s) => s.id === 0 ? { ...s, status: 'running' } : s))
-        setProgress(15)
+        // Simulate clone finishing quickly
+        setTimeout(() => {
+          setSteps((prev) =>
+            prev.map((step) =>
+              step.id === 0 ? { ...step, status: 'done' } : step,
+            ),
+          )
+          setProgress(30)
+        }, 400)
 
-        await new Promise((r) => setTimeout(r, 600))
+        const body = JSON.stringify({ owner: repo.owner, repo: repo.name })
 
-        setSteps((prev) => prev.map((s) => {
-          if (s.id === 0) return { ...s, status: 'done' }
-          if (s.id === 1 || s.id === 2) return { ...s, status: 'running' }
-          return s
-        }))
-        setProgress(40)
+        const [gitleaksRes, trivyRes] = await Promise.allSettled([
+          fetch('/api/scan/gitleaks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+          }),
+          fetch('/api/scan/trivy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+          }),
+        ])
 
-        const res = await fetch('/api/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ owner: repo.owner, repo: repo.name }),
-          signal: controller.signal,
-        })
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: `Server error ${res.status}` }))
-          throw new Error(err.error || `Scan failed with status ${res.status}`)
+        // Gitleaks step
+        if (gitleaksRes.status === 'fulfilled' && gitleaksRes.value.ok) {
+          const data = (await gitleaksRes.value.json()) as ScanResponse['gitleaks']
+          setSteps((prev) =>
+            prev.map((step) =>
+              step.id === 1 ? { ...step, status: 'done' } : step,
+            ),
+          )
+          setScanResult((prev) => ({
+            gitleaks: data ?? null,
+            trivy: prev?.trivy ?? null,
+            repo: `https://github.com/${repo.owner}/${repo.name}`,
+            errors: {
+              gitleaks: null,
+              trivy: prev?.errors.trivy ?? null,
+            },
+          }))
+        } else {
+          setSteps((prev) =>
+            prev.map((step) =>
+              step.id === 1 ? { ...step, status: 'failed' } : step,
+            ),
+          )
+          setScanResult((prev) => ({
+            gitleaks: null,
+            trivy: prev?.trivy ?? null,
+            repo: `https://github.com/${repo.owner}/${repo.name}`,
+            errors: {
+              gitleaks: 'Gitleaks scan failed',
+              trivy: prev?.errors.trivy ?? null,
+            },
+          }))
         }
 
-        const data: ScanResponse = await res.json()
+        // Trivy step
+        if (trivyRes.status === 'fulfilled' && trivyRes.value.ok) {
+          const data = (await trivyRes.value.json()) as ScanResponse['trivy']
+          setSteps((prev) =>
+            prev.map((step) =>
+              step.id === 2 ? { ...step, status: 'done' } : step,
+            ),
+          )
+          setScanResult((prev) => ({
+            gitleaks: prev?.gitleaks ?? null,
+            trivy: data ?? null,
+            repo: `https://github.com/${repo.owner}/${repo.name}`,
+            errors: {
+              gitleaks: prev?.errors.gitleaks ?? null,
+              trivy: null,
+            },
+          }))
+        } else {
+          setSteps((prev) =>
+            prev.map((step) =>
+              step.id === 2 ? { ...step, status: 'failed' } : step,
+            ),
+          )
+          setScanResult((prev) => ({
+            gitleaks: prev?.gitleaks ?? null,
+            trivy: null,
+            repo: `https://github.com/${repo.owner}/${repo.name}`,
+            errors: {
+              gitleaks: prev?.errors.gitleaks ?? null,
+              trivy: 'Trivy scan failed',
+            },
+          }))
+        }
 
-        setSteps((prev) => prev.map((s) => {
-          if (s.id <= 1) return { ...s, status: data.errors?.gitleaks ? 'failed' : 'done' }
-          if (s.id === 2) return { ...s, status: data.errors?.trivy ? 'failed' : 'done' }
-          if (s.id === 3) return { ...s, status: 'running' }
-          return s
-        }))
-        setProgress(85)
-
-        await new Promise((r) => setTimeout(r, 400))
-
-        setSteps((prev) => prev.map((s) => {
-          if (s.id === 3) return { ...s, status: 'done' }
-          return s
-        }))
+        // Aggregating
+        setSteps((prev) =>
+          prev.map((step) =>
+            step.id === 3 ? { ...step, status: 'done' } : step,
+          ),
+        )
         setProgress(100)
-        setScanResult(data)
         setDone(true)
       } catch (e) {
-        if ((e as Error).name === 'AbortError') return
         setScanError(e instanceof Error ? e.message : 'Scan failed')
-        setSteps((prev) => prev.map((s) => s.status === 'running' ? { ...s, status: 'failed' } : s))
+        setSteps((prev) =>
+          prev.map((step) =>
+            step.status === 'running' ? { ...step, status: 'failed' } : step,
+          ),
+        )
       }
     }
 
-    runScan()
-
-    return () => {
-      controller.abort()
-    }
+    void run()
   }, [repo])
 
   const handleViewReport = () => {
