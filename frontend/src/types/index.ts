@@ -2,6 +2,7 @@
 
 export interface Repo {
   id: string
+  githubId: number
   name: string
   full_name: string
   owner: string
@@ -147,6 +148,7 @@ export interface GitHubUser {
 }
 
 export interface GitHubRepo {
+  id: number
   name: string
   full_name: string
   owner: string

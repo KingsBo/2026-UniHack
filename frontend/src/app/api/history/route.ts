@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/get-user";
 
+const MAX_SCANS_PER_USER = 3;
+
 export async function GET(request: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) {
@@ -11,7 +13,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.toLowerCase();
 
-  let query = supabase
+  const query = supabase
     .from("scans")
     .select("id, status, branch, finding_count, started_at, completed_at, duration_ms, repository:repositories(id, name, full_name)")
     .eq("user_id", user.id)
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
       return {
         id: scan.id,
         repoId: repo?.id || "",
-        repoName: (repo?.name as string) || "unknown",
+        repoName: (repo?.full_name as string) || (repo?.name as string) || "unknown",
         branch: scan.branch || "main",
         status: scan.status === "completed" ? "complete" : scan.status,
         startedAt: scan.started_at,
@@ -44,5 +46,10 @@ export async function GET(request: NextRequest) {
       q ? (entry.repoName as string).toLowerCase().includes(q) : true,
     );
 
-  return NextResponse.json(history);
+  return NextResponse.json({
+    history,
+    scansUsed: history.length,
+    scansLimit: MAX_SCANS_PER_USER,
+    scansRemaining: Math.max(0, MAX_SCANS_PER_USER - history.length),
+  });
 }

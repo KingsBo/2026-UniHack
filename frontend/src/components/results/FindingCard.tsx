@@ -11,9 +11,15 @@ const SEVERITY_STYLES: Record<string, { dot: string; badge: string }> = {
   info:     { dot: '#7B6EF6', badge: 'rgba(123,110,246,0.1)' },
 }
 
+function truncate(text: string, max: number) {
+  if (text.length <= max) return text
+  return text.slice(0, max - 3).replace(/\s+\S*$/, '') + '...'
+}
+
 export default function FindingCard({ finding }: { finding: Finding }) {
   const [expanded, setExpanded] = useState(false)
   const style = SEVERITY_STYLES[finding.severity] ?? SEVERITY_STYLES.info
+  const shortDesc = truncate(finding.description, 200)
 
   return (
     <div
@@ -33,7 +39,9 @@ export default function FindingCard({ finding }: { finding: Finding }) {
               {finding.severity}
             </span>
           </div>
-          <p className="font-mono text-[11px] leading-relaxed mb-3" style={{ color: 'var(--text-muted)' }}>{finding.description}</p>
+          <p className="font-mono text-[11px] leading-relaxed mb-3" style={{ color: 'var(--text-muted)' }}>
+            {expanded ? finding.description : shortDesc}
+          </p>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded font-mono text-[11px]"
             style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
             <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v2H2zm0 4h8v2H2zm0 4h10v2H2z" /></svg>
@@ -55,11 +63,37 @@ export default function FindingCard({ finding }: { finding: Finding }) {
               </svg>
             </div>
           </div>
-          {expanded && finding.snippet && (
-            <div className="mt-4 px-4 py-3 rounded-lg overflow-x-auto"
-              style={{ background: 'var(--bg0)', border: '1px solid var(--border)' }}>
-              <code className="font-mono text-xs whitespace-pre" style={{ color: 'var(--green)' }}>{finding.snippet}</code>
-            </div>
+          {expanded && (
+            <>
+              {/* Trivy package metadata */}
+              {finding.tool === 'trivy' && (finding.pkgName || finding.cveId) && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {finding.cveId && (
+                    <a href={finding.primaryUrl || `https://nvd.nist.gov/vuln/detail/${finding.cveId}`} target="_blank" rel="noopener noreferrer"
+                      className="font-mono text-[10px] px-2 py-1 rounded no-underline transition-opacity hover:opacity-80"
+                      style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+                      {finding.cveId} ↗
+                    </a>
+                  )}
+                  {finding.pkgName && (
+                    <span className="font-mono text-[10px] px-2 py-1 rounded" style={{ background: 'var(--bg2)', color: 'var(--text-secondary)' }}>
+                      {finding.pkgName}{finding.installedVersion ? ` @ ${finding.installedVersion}` : ''}
+                    </span>
+                  )}
+                  {finding.fixedVersion && (
+                    <span className="font-mono text-[10px] px-2 py-1 rounded" style={{ background: 'var(--green-dim)', color: 'var(--green)' }}>
+                      fix → {finding.fixedVersion}
+                    </span>
+                  )}
+                </div>
+              )}
+              {finding.snippet && (
+                <div className="mt-4 px-4 py-3 rounded-lg overflow-x-auto"
+                  style={{ background: 'var(--bg0)', border: '1px solid var(--border)' }}>
+                  <code className="font-mono text-xs whitespace-pre" style={{ color: 'var(--green)' }}>{finding.snippet}</code>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

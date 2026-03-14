@@ -68,13 +68,21 @@ export default function ScanModal({ repo, onClose }: Props) {
           body: JSON.stringify({
             owner: repo.owner,
             repo: repo.name,
-            repoId: Number(repo.id) || 0,
+            repoId: repo.githubId,
             repoFullName: repo.full_name,
             defaultBranch: repo.defaultBranch,
             isPrivate: repo.visibility === 'private',
             language: repo.language,
           }),
         })
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({ error: 'Scan failed' }))
+          const errMsg = res.status === 429
+            ? errData.error || `Scan limit reached (${errData.scansLimit} scans max).`
+            : errData.error || `Scan failed (${res.status})`
+          throw new Error(errMsg)
+        }
 
         const data = (await res.json()) as ScanResponse & { scanId?: string }
 

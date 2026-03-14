@@ -24,6 +24,7 @@ const LANGUAGE_COLORS: Record<string, string> = {
 function mapToRepo(gh: GitHubRepo): Repo {
   return {
     id: gh.full_name,
+    githubId: gh.id,
     name: gh.name,
     full_name: gh.full_name,
     owner: gh.owner,

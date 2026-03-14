@@ -28,12 +28,22 @@ export default function HistoryPage() {
   const [filter, setFilter] = useState('')
   const [loading, setLoading] = useState(true)
   const [entries, setEntries] = useState<ScanHistoryEntry[]>([])
+  const [scansUsed, setScansUsed] = useState(0)
+  const [scansLimit, setScansLimit] = useState(3)
 
   useEffect(() => {
     fetch('/api/history')
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) setEntries(data)
+        if (data.history && Array.isArray(data.history)) {
+          setEntries(data.history)
+          setScansUsed(data.scansUsed ?? data.history.length)
+          setScansLimit(data.scansLimit ?? 3)
+        } else if (Array.isArray(data)) {
+          // Fallback for old response format
+          setEntries(data)
+          setScansUsed(data.length)
+        }
       })
       .catch((err) => console.error('Failed to load history:', err))
       .finally(() => setLoading(false))
@@ -43,15 +53,38 @@ export default function HistoryPage() {
     e.repoName.toLowerCase().includes(filter.toLowerCase())
   )
 
+  const scansRemaining = Math.max(0, scansLimit - scansUsed)
+
   return (
     <div className="px-12 py-10">
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold tracking-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>
-          Scan history
-        </h1>
-        <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
-          // past security scans across your repositories
-        </p>
+      <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>
+            Scan history
+          </h1>
+          <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
+            // past security scans across your repositories
+          </p>
+        </div>
+        {!loading && (
+          <div
+            className="flex items-center gap-3 px-4 py-2.5 rounded-lg font-mono text-xs"
+            style={{ background: 'var(--bg2)', border: '1px solid var(--border)' }}
+          >
+            <span style={{ color: 'var(--text-muted)' }}>Scans used</span>
+            <span
+              className="font-semibold"
+              style={{ color: scansRemaining === 0 ? 'var(--red)' : 'var(--accent)' }}
+            >
+              {scansUsed}/{scansLimit}
+            </span>
+            {scansRemaining === 0 && (
+              <span className="px-2 py-0.5 rounded text-[10px]" style={{ background: 'var(--red-dim)', color: 'var(--red)' }}>
+                limit reached
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mb-6 flex items-center gap-4 flex-wrap">

@@ -8,6 +8,8 @@ import { supabase, getOrCreateRepo } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/get-user";
 import type { GitleaksFinding, TrivyVulnerability } from "@/types";
 
+const MAX_SCANS_PER_USER = 3;
+
 function mapGitleaksSeverity(): string {
   return "critical";
 }
@@ -20,6 +22,19 @@ function mapTrivySeverity(sev: string): string {
     case "LOW": return "low";
     default: return "info";
   }
+}
+
+/** Truncate long Trivy descriptions to a concise summary sentence. */
+function summariseTrivyDescription(v: TrivyVulnerability): string {
+  const pkg = v.PkgName || "unknown package";
+  const installed = v.InstalledVersion ? ` (${v.InstalledVersion})` : "";
+  const fix = v.FixedVersion ? ` Fix: upgrade to ${v.FixedVersion}.` : " No fix available yet.";
+  const titleBit = v.Title ? `${v.Title}. ` : "";
+  // Take first sentence of the raw description (if any) up to 160 chars
+  const rawDesc = v.Description || "";
+  const firstSentence = rawDesc.split(/\.\s/)[0];
+  const shortDesc = firstSentence.length > 160 ? firstSentence.slice(0, 157) + "..." : firstSentence;
+  return `${titleBit}Affects ${pkg}${installed}.${fix}${shortDesc ? ` ${shortDesc}.` : ""}`;
 }
 
 export async function POST(request: NextRequest) {
@@ -55,6 +70,24 @@ export async function POST(request: NextRequest) {
     let dbRepoId: string | null = null;
 
     if (user) {
+      // Check scan rate limit
+      const { count, error: countErr } = await supabase
+        .from("scans")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+      if (!countErr && count !== null && count >= MAX_SCANS_PER_USER) {
+        return NextResponse.json(
+          {
+            error: `Scan limit reached. You have used all ${MAX_SCANS_PER_USER} of your available scans.`,
+            errorType: "rate_limit",
+            scansUsed: count,
+            scansLimit: MAX_SCANS_PER_USER,
+          },
+          { status: 429 },
+        );
+      }
+
       // Upsert repository
       const dbRepo = await getOrCreateRepo(user.id, {
         github_repo_id: repoId || 0,
@@ -130,7 +163,7 @@ export async function POST(request: NextRequest) {
             tool_name: "trivy",
             severity: mapTrivySeverity(v.Severity),
             title: v.Title || v.VulnerabilityID,
-            description: v.Description || `${v.VulnerabilityID} in ${v.PkgName} ${v.InstalledVersion}`,
+            description: summariseTrivyDescription(v),
             file_path: v.PkgPath || v.PkgName,
             line_number: 0,
             rule_id: v.VulnerabilityID,

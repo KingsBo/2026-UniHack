@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
-export async function POST() {
-  const response = NextResponse.redirect(new URL("/", process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"));
+function clearTokenAndRedirect() {
+  const response = NextResponse.redirect(
+    new URL("/", process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"),
+  );
 
   response.cookies.set("github_token", "", {
     httpOnly: true,
@@ -12,4 +14,13 @@ export async function POST() {
   });
 
   return response;
+}
+
+// Support both GET (for <a> links) and POST (for fetch calls)
+export async function GET() {
+  return clearTokenAndRedirect();
+}
+
+export async function POST() {
+  return clearTokenAndRedirect();
 }

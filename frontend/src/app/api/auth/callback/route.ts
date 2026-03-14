@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrCreateUser } from "@/lib/supabase";
+import { getOrCreateUser, getUserByGithubId } from "@/lib/supabase";
+import { resetUserData } from "@/app/api/dev/reset/route";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -46,6 +47,15 @@ export async function GET(request: NextRequest) {
         ghUser.avatar_url,
       );
       githubUserId = ghUser.id;
+
+      // In test mode, auto-clear scan data on each login
+      if (process.env.TEST_MODE === "true") {
+        const dbUser = await getUserByGithubId(ghUser.id);
+        if (dbUser) {
+          await resetUserData(dbUser.id);
+          console.log("[TEST_MODE] Cleared scan data for user:", ghUser.login);
+        }
+      }
     }
   } catch (err) {
     console.error("Failed to upsert user:", err);

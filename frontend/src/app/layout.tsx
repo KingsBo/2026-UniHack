@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import ThemeProviderClient from '@/components/ThemeProviderClient'
+import { AuthProvider } from '@/context/AuthContext'
 
 export const metadata: Metadata = {
   title: 'Kestrel — Security scanning for your codebase',
@@ -28,7 +29,9 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <ThemeProviderClient>{children}</ThemeProviderClient>
+        <ThemeProviderClient>
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProviderClient>
       </body>
     </html>
   )
