@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
     for (const r of batch) {
       if (r.permissions?.admin || r.permissions?.push) {
         repos.push({
+          id: r.id,
           name: r.name,
           full_name: r.full_name,
           owner: r.owner.login,

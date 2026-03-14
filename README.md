@@ -16,7 +16,7 @@ The frontend never touches repos directly. All cloning and scanning happens insi
 
 ## Getting started
 
-**1. Start the scanner container:**
+**1. Start the scanner container (This is only for first time cloning the repo):**
 
 ```bash
 docker compose up -d
@@ -30,9 +30,16 @@ curl http://localhost:3001/health
 
 **2. Start the frontend:**
 
+MUST CHECK BEFORE RUNNING NPM RUN DEV
+
+1. npm install in frontend
+2. Add ``.env`` in frontend with the credentials
+3. Add ``scanner-invoker-key.json`` in root with the proper credentials
+4. Stupid mistake I made but make sure all localhost3000 proccess are killed
+
+Then you can run
+
 ```bash
-cd frontend
-npm install
 npm run dev
 ```
 
@@ -54,36 +61,3 @@ npm run dev
         ├── Dockerfile          # node:22-slim + git + gitleaks
         └── src/index.ts        # Express server (POST /scan, GET /health)
 ```
-
-## API
-
-### `POST /api/scan`
-
-Request:
-```json
-{ "repoUrl": "https://github.com/owner/repo" }
-```
-
-Response:
-```json
-{
-  "findings": [
-    {
-      "RuleID": "aws-access-key",
-      "Description": "AWS Access Key",
-      "File": "config.py",
-      "StartLine": 12,
-      "Secret": "AKIA...",
-      "Commit": "abc123...",
-      "Author": "jane",
-      "Date": "2024-10-20T14:40:36Z",
-      "Fingerprint": "..."
-    }
-  ],
-  "summary": { "total": 1, "repo": "https://github.com/owner/repo" }
-}
-```
-
-## Adding more scanners
-
-To add semgrep or trivy, create a new directory under `scanners/` following the same pattern (Dockerfile + Express server), add it to `docker-compose.yml`, and add a `SEMGREP_SERVICE_URL` / `TRIVY_SERVICE_URL` env var to the frontend proxy.

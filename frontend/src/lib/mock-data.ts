@@ -3,6 +3,7 @@ import type { Repo, ScanResult, ScanHistoryEntry } from '@/types'
 export const MOCK_REPOS: Repo[] = [
   {
     id: 'repo-1',
+    githubId: 100001,
     name: 'api-gateway',
     full_name: 'demo/api-gateway',
     owner: 'demo',
@@ -17,6 +18,7 @@ export const MOCK_REPOS: Repo[] = [
   },
   {
     id: 'repo-2',
+    githubId: 100002,
     name: 'data-pipeline',
     full_name: 'demo/data-pipeline',
     owner: 'demo',
@@ -30,6 +32,7 @@ export const MOCK_REPOS: Repo[] = [
   },
   {
     id: 'repo-3',
+    githubId: 100003,
     name: 'auth-service',
     full_name: 'demo/auth-service',
     owner: 'demo',
@@ -43,6 +46,7 @@ export const MOCK_REPOS: Repo[] = [
   },
   {
     id: 'repo-4',
+    githubId: 100004,
     name: 'frontend-app',
     full_name: 'demo/frontend-app',
     owner: 'demo',
@@ -56,6 +60,7 @@ export const MOCK_REPOS: Repo[] = [
   },
   {
     id: 'repo-5',
+    githubId: 100005,
     name: 'infra',
     full_name: 'demo/infra',
     owner: 'demo',
@@ -69,6 +74,7 @@ export const MOCK_REPOS: Repo[] = [
   },
   {
     id: 'repo-6',
+    githubId: 100006,
     name: 'ml-models',
     full_name: 'demo/ml-models',
     owner: 'demo',

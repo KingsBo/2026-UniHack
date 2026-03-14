@@ -17,7 +17,6 @@ export default function DocsPage() {
           { id: 'getting-started', label: 'Getting started' },
           { id: 'tools', label: 'Scan tools' },
           { id: 'results', label: 'Understanding results' },
-          { id: 'api', label: 'API & keys' },
         ].map((item) => (
           <a key={item.id} href={`#${item.id}`} className="px-3 py-1.5 text-xs font-mono rounded-lg transition-colors" style={{ background: 'var(--bg2)', color: 'var(--text-secondary)' }}>
             {item.label}
@@ -29,11 +28,11 @@ export default function DocsPage() {
         <section id="getting-started">
           <h2 className="text-xl font-bold tracking-tight mb-4" style={{ color: 'var(--text-primary)' }}>Getting started</h2>
           <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
-            Kestrel runs security scans on your Git repositories using industry-standard tools. Add a repo from the dashboard, run a scan, and review findings by severity.
+            Kestrel runs security scans on your Git repositories using industry-standard tools. Sign in with GitHub, select a repo from the dashboard, run a scan, and review findings by severity.
           </p>
           <ol className="list-decimal list-inside space-y-2 text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
-            <li>Connect your repository (GitHub/GitLab or clone URL)</li>
-            <li>Choose which tools to run: Semgrep, Gitleaks, Trivy</li>
+            <li>Sign in with your GitHub account</li>
+            <li>Select a repository from your dashboard</li>
             <li>Start a scan — results appear in Scan history and on the result page</li>
             <li>Fix or dismiss findings and re-scan as needed</li>
           </ol>
@@ -46,15 +45,9 @@ export default function DocsPage() {
           <h2 className="text-xl font-bold tracking-tight mb-4" style={{ color: 'var(--text-primary)' }}>Scan tools</h2>
           <div className="space-y-6">
             <div className="rounded-xl p-5" style={{ background: 'var(--bg1)', border: '1px solid var(--border)' }}>
-              <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Semgrep</h3>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                Static analysis for code quality and security (SAST). Detects bugs, vulnerabilities, and policy violations across many languages.
-              </p>
-            </div>
-            <div className="rounded-xl p-5" style={{ background: 'var(--bg1)', border: '1px solid var(--border)' }}>
               <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Gitleaks</h3>
               <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                Finds secrets and credentials in your repo history: API keys, passwords, tokens, and other sensitive data that shouldn’t be committed.
+                Finds secrets and credentials in your repo history: API keys, passwords, tokens, and other sensitive data that shouldn&apos;t be committed.
               </p>
             </div>
             <div className="rounded-xl p-5" style={{ background: 'var(--bg1)', border: '1px solid var(--border)' }}>
@@ -77,14 +70,7 @@ export default function DocsPage() {
             <span className="font-mono text-[10px] px-2 py-0.5 rounded capitalize" style={{ background: 'rgba(245,166,35,0.1)', color: '#F5A623' }}>Medium</span>
             {' · '}
             <span className="font-mono text-[10px] px-2 py-0.5 rounded capitalize" style={{ background: 'rgba(45,217,143,0.1)', color: '#2DD98F' }}>Low</span>
-            . Each finding includes location, rule ID, and a short description. Use the result page to filter by tool or severity and to navigate to the relevant file and line.
-          </p>
-        </section>
-
-        <section id="api">
-          <h2 className="text-xl font-bold tracking-tight mb-4" style={{ color: 'var(--text-primary)' }}>API & keys</h2>
-          <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
-            Manage API keys from <Link href="/dashboard/keys" className="underline" style={{ color: 'var(--accent)' }}>Dashboard → API keys</Link>. Use keys to trigger scans or fetch results from CI/CD or your own scripts. Keys are scoped to your account; rotate them from the dashboard if compromised.
+            . Each finding includes location, rule ID, and a short description. Use the result page to filter by tool or severity and toggle the AI summary for a quick analysis.
           </p>
         </section>
       </article>

@@ -5,6 +5,11 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const token = request.cookies.get('github_token')?.value
 
+  // Allow /result/demo without auth
+  if (pathname === '/result/demo') {
+    return NextResponse.next()
+  }
+
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/result/')) {
     if (!token) {
       const loginUrl = new URL('/', request.url)

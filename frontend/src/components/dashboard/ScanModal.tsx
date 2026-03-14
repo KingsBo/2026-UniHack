@@ -22,7 +22,7 @@ export default function ScanModal({ repo, onClose }: Props) {
   const [progress, setProgress] = useState(0)
   const [done, setDone] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
-  const [scanResult, setScanResult] = useState<ScanResponse | null>(null)
+  const [scanResult, setScanResult] = useState<(ScanResponse & { scanId?: string }) | null>(null)
 
   const isOpen = !!repo
 
@@ -52,88 +52,59 @@ export default function ScanModal({ repo, onClose }: Props) {
           setProgress(30)
         }, 400)
 
-        const body = JSON.stringify({ owner: repo.owner, repo: repo.name })
-
-        const [gitleaksRes, trivyRes] = await Promise.allSettled([
-          fetch('/api/scan/gitleaks', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body,
-          }),
-          fetch('/api/scan/trivy', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body,
-          }),
-        ])
-
-        // Gitleaks step
-        if (gitleaksRes.status === 'fulfilled' && gitleaksRes.value.ok) {
-          const data = (await gitleaksRes.value.json()) as ScanResponse['gitleaks']
+        // Animate scanner steps while waiting
+        setTimeout(() => {
           setSteps((prev) =>
             prev.map((step) =>
-              step.id === 1 ? { ...step, status: 'done' } : step,
+              step.id === 1 || step.id === 2 ? { ...step, status: 'running' } : step,
             ),
           )
-          setScanResult((prev) => ({
-            gitleaks: data ?? null,
-            trivy: prev?.trivy ?? null,
-            repo: `https://github.com/${repo.owner}/${repo.name}`,
-            errors: {
-              gitleaks: null,
-              trivy: prev?.errors.trivy ?? null,
-            },
-          }))
-        } else {
-          setSteps((prev) =>
-            prev.map((step) =>
-              step.id === 1 ? { ...step, status: 'failed' } : step,
-            ),
-          )
-          setScanResult((prev) => ({
-            gitleaks: null,
-            trivy: prev?.trivy ?? null,
-            repo: `https://github.com/${repo.owner}/${repo.name}`,
-            errors: {
-              gitleaks: 'Gitleaks scan failed',
-              trivy: prev?.errors.trivy ?? null,
-            },
-          }))
+          setProgress(50)
+        }, 600)
+
+        const res = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            owner: repo.owner,
+            repo: repo.name,
+            repoId: repo.githubId,
+            repoFullName: repo.full_name,
+            defaultBranch: repo.defaultBranch,
+            isPrivate: repo.visibility === 'private',
+            language: repo.language,
+          }),
+        })
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({ error: 'Scan failed' }))
+          const errMsg = res.status === 429
+            ? errData.error || `Scan limit reached (${errData.scansLimit} scans max).`
+            : errData.error || `Scan failed (${res.status})`
+          throw new Error(errMsg)
         }
 
-        // Trivy step
-        if (trivyRes.status === 'fulfilled' && trivyRes.value.ok) {
-          const data = (await trivyRes.value.json()) as ScanResponse['trivy']
-          setSteps((prev) =>
-            prev.map((step) =>
-              step.id === 2 ? { ...step, status: 'done' } : step,
-            ),
-          )
-          setScanResult((prev) => ({
-            gitleaks: prev?.gitleaks ?? null,
-            trivy: data ?? null,
-            repo: `https://github.com/${repo.owner}/${repo.name}`,
-            errors: {
-              gitleaks: prev?.errors.gitleaks ?? null,
-              trivy: null,
-            },
-          }))
-        } else {
-          setSteps((prev) =>
-            prev.map((step) =>
-              step.id === 2 ? { ...step, status: 'failed' } : step,
-            ),
-          )
-          setScanResult((prev) => ({
-            gitleaks: prev?.gitleaks ?? null,
-            trivy: null,
-            repo: `https://github.com/${repo.owner}/${repo.name}`,
-            errors: {
-              gitleaks: prev?.errors.gitleaks ?? null,
-              trivy: 'Trivy scan failed',
-            },
-          }))
-        }
+        const data = (await res.json()) as ScanResponse & { scanId?: string }
+
+        // Update gitleaks step
+        setSteps((prev) =>
+          prev.map((step) =>
+            step.id === 1
+              ? { ...step, status: data.errors.gitleaks ? 'failed' : 'done' }
+              : step,
+          ),
+        )
+
+        // Update trivy step
+        setSteps((prev) =>
+          prev.map((step) =>
+            step.id === 2
+              ? { ...step, status: data.errors.trivy ? 'failed' : 'done' }
+              : step,
+          ),
+        )
+
+        setScanResult(data)
 
         // Aggregating
         setSteps((prev) =>
@@ -158,9 +129,14 @@ export default function ScanModal({ repo, onClose }: Props) {
 
   const handleViewReport = () => {
     if (!scanResult || !repo) return
-    const scanId = `scan-${Date.now()}`
-    sessionStorage.setItem(scanId, JSON.stringify({ ...scanResult, repoName: repo.full_name }))
-    router.push(`/result/${scanId}`)
+    if (scanResult.scanId) {
+      router.push(`/result/${scanResult.scanId}`)
+    } else {
+      // Fallback: store in sessionStorage if DB persistence failed
+      const scanId = `scan-${Date.now()}`
+      sessionStorage.setItem(scanId, JSON.stringify({ ...scanResult, repoName: repo.full_name }))
+      router.push(`/result/${scanId}`)
+    }
   }
 
   if (!isOpen) return null

@@ -6,11 +6,14 @@ import ScanModal from '@/components/dashboard/ScanModal'
 import { useGitHubRepos } from '@/hooks/useGitHubRepos'
 import type { Repo } from '@/types'
 
+const isTestMode = process.env.NEXT_PUBLIC_TEST_MODE === 'true'
+
 export default function DashboardPage() {
   const { repos, loading, error, needsGitHub } = useGitHubRepos()
   const [scanningRepo, setScanningRepo] = useState<Repo | null>(null)
   const [filter, setFilter] = useState('')
   const [visFilter, setVisFilter] = useState<'all' | 'public' | 'private'>('all')
+  const [resetting, setResetting] = useState(false)
 
   const filtered = repos.filter((r) => {
     const matchName = r.name.toLowerCase().includes(filter.toLowerCase())
@@ -50,13 +53,35 @@ export default function DashboardPage() {
     <>
       <div className="px-12 py-10">
         {/* Header */}
-        <div className="mb-[24px]">
-          <h1 className="text-2xl font-extrabold tracking-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>
-            Your repositories
-          </h1>
-          <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
-            // select a repo to run a security scan
-          </p>
+        <div className="mb-[24px] flex items-start justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>
+              Your repositories
+            </h1>
+            <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
+              // select a repo to run a security scan
+            </p>
+          </div>
+          {isTestMode && (
+            <button
+              onClick={async () => {
+                setResetting(true)
+                try {
+                  await fetch('/api/dev/reset', { method: 'POST' })
+                  window.location.reload()
+                } catch {
+                  // ignore
+                } finally {
+                  setResetting(false)
+                }
+              }}
+              disabled={resetting}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg font-mono text-xs transition-all"
+              style={{ background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid rgba(245,166,35,0.25)' }}
+            >
+              {resetting ? '↻ Resetting...' : '⟲ Reset test data'}
+            </button>
+          )}
         </div>
 
         {/* Toolbar */}
