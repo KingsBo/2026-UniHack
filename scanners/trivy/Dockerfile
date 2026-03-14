@@ -9,15 +9,16 @@ RUN npx tsc
 
 FROM node:22-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates curl \
+    && curl -sSL https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.tar.gz \
+       | tar xz -C /usr/local/bin trivy \
+    && chmod +x /usr/local/bin/trivy \
+    && apt-get purge -y curl && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/dist /app/dist
 COPY --from=builder /app/node_modules /app/node_modules
 COPY --from=builder /app/package.json /app/package.json
-
-COPY bin/trivy /usr/local/bin/trivy
-RUN chmod +x /usr/local/bin/trivy
 
 RUN trivy fs --download-db-only
 
