@@ -69,7 +69,15 @@ export default function DocsPage() {
         <section id="results">
           <h2 className="text-xl font-bold tracking-tight mb-4" style={{ color: 'var(--text-primary)' }}>Understanding results</h2>
           <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
-            Findings are grouped by severity: <span className="font-mono" style={{ color: 'var(--red)' }}>Critical</span>, <span className="font-mono" style={{ color: 'var(--amber)' }}>High</span>, <span className="font-mono" style={{ color: 'var(--vc-green)' }}>Medium</span>, and <span className="font-mono" style={{ color: 'var(--text-muted)' }}>Low</span>. Each finding includes location, rule ID, and a short description. Use the result page to filter by tool or severity and to navigate to the relevant file and line.
+            Findings are grouped by severity:{' '}
+            <span className="font-mono text-[10px] px-2 py-0.5 rounded capitalize" style={{ background: 'rgba(242,92,92,0.1)', color: '#F25C5C' }}>Critical</span>
+            {' · '}
+            <span className="font-mono text-[10px] px-2 py-0.5 rounded capitalize" style={{ background: 'rgba(245,128,37,0.1)', color: '#F58025' }}>High</span>
+            {' · '}
+            <span className="font-mono text-[10px] px-2 py-0.5 rounded capitalize" style={{ background: 'rgba(245,166,35,0.1)', color: '#F5A623' }}>Medium</span>
+            {' · '}
+            <span className="font-mono text-[10px] px-2 py-0.5 rounded capitalize" style={{ background: 'rgba(45,217,143,0.1)', color: '#2DD98F' }}>Low</span>
+            . Each finding includes location, rule ID, and a short description. Use the result page to filter by tool or severity and to navigate to the relevant file and line.
           </p>
         </section>
 
