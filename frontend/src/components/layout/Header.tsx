@@ -54,12 +54,7 @@ export default function Header({ variant = 'landing' }: HeaderProps) {
             <span className="relative z-10">Get started</span>
             <span className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.15), transparent)' }} />
           </Link>
-        ) : (
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold cursor-pointer"
-            style={{ background: 'var(--accent-dim)', border: '1px solid var(--accent)', color: 'var(--accent)' }}>
-            JD
-          </div>
-        )}
+        ) : null}
       </div>
     </header>
   )

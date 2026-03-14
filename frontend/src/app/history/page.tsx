@@ -33,7 +33,7 @@ export default function HistoryPage() {
 
   return (
     <div className="px-12 py-10">
-      <div className="mb-9">
+      <div className="mb-6">
         <h1 className="text-2xl font-extrabold tracking-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>
           Scan history
         </h1>
