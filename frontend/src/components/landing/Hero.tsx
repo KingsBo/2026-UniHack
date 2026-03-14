@@ -145,7 +145,7 @@ export default function Hero() {
         </div>
 
         <button onClick={() => router.push('/dashboard')}
-          className="relative overflow-hidden w-full mt-6 py-3.5 text-sm font-semibold tracking-wide text-white rounded-xl transition-all hover:-translate-y-px"
+          className="relative overflow-hidden w-full mt-10 py-3.5 text-sm font-semibold tracking-wide text-white rounded-xl transition-all hover:-translate-y-px"
           style={{ background: 'var(--accent)' }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(123,110,246,0.35)' }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}>

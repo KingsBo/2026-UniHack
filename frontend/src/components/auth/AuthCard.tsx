@@ -78,7 +78,7 @@ export default function AuthCard() {
           <div>
             <label className="block font-mono text-[10px] tracking-widest uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Email</label>
             <input type="email" placeholder="you@company.com"
-              className="w-full px-4 py-3 text-sm font-mono rounded-xl outline-none transition-all placeholder:text-[#4A4860]"
+              className="w-full px-4 py-3 text-sm font-mono rounded-xl outline-none transition-all placeholder:text-text-secondary"
               style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
               onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
               onBlur={(e) => { e.target.style.borderColor = ''; e.target.style.boxShadow = 'none' }} />
@@ -86,7 +86,7 @@ export default function AuthCard() {
           <div>
             <label className="block font-mono text-[10px] tracking-widest uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Password</label>
             <input type="password" placeholder="••••••••••"
-              className="w-full px-4 py-3 text-sm font-mono rounded-xl outline-none transition-all placeholder:text-[#4A4860]"
+              className="w-full px-4 py-3 text-sm font-mono rounded-xl outline-none transition-all placeholder:text-text-secondary"
               style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
               onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
               onBlur={(e) => { e.target.style.borderColor = ''; e.target.style.boxShadow = 'none' }} />
@@ -94,7 +94,7 @@ export default function AuthCard() {
         </div>
 
         <button onClick={() => router.push('/dashboard')}
-          className="relative overflow-hidden w-full mt-6 py-3.5 text-sm font-semibold tracking-wide text-white rounded-xl transition-all hover:-translate-y-px"
+          className="relative overflow-hidden w-full mt-4 py-3.5 text-sm font-semibold tracking-wide text-white rounded-xl transition-all hover:-translate-y-px"
           style={{ background: '#7B6EF6' }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(123,110,246,0.35)' }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}>
