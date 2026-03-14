@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 const GITLEAKS_SERVICE_URL =
   process.env.GITLEAKS_SERVICE_URL || "http://localhost:3001";
@@ -6,11 +7,21 @@ const GITLEAKS_SERVICE_URL =
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    
+    // Get GitHub token from cookie if available
+    const cookieStore = await cookies();
+    const githubToken = cookieStore.get("github_token")?.value;
+
+    // Include token in request to scanner if available
+    const scanBody: any = { repoUrl: body.repoUrl };
+    if (githubToken) {
+      scanBody.githubToken = githubToken;
+    }
 
     const scanRes = await fetch(`${GITLEAKS_SERVICE_URL}/scan`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(scanBody),
     });
 
     const data = await scanRes.json();

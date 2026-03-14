@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Finding, ScanResponse, ScanError } from "@/lib/types";
 
 function maskSecret(secret: string): string {
@@ -65,12 +65,66 @@ function FindingCard({ finding, index }: { finding: Finding; index: number }) {
   );
 }
 
+interface AuthStatus {
+  authenticated: boolean;
+  user?: {
+    login: string;
+    name?: string;
+    avatar_url?: string;
+  };
+}
+
 export default function Home() {
   const [repoUrl, setRepoUrl] = useState("");
   const [findings, setFindings] = useState<Finding[]>([]);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scannedRepo, setScannedRepo] = useState<string | null>(null);
+  const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
+
+  useEffect(() => {
+    // Check auth status on mount
+    checkAuthStatus();
+    
+    // Check for OAuth callback params
+    const params = new URLSearchParams(window.location.search);
+    const authParam = params.get("auth");
+    const errorParam = params.get("error");
+    
+    if (authParam === "success") {
+      checkAuthStatus();
+      // Clean URL
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    
+    if (errorParam) {
+      setError(`Authentication failed: ${errorParam}`);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  async function checkAuthStatus() {
+    try {
+      const res = await fetch("/api/auth/status");
+      const data: AuthStatus = await res.json();
+      setAuthStatus(data);
+    } catch {
+      setAuthStatus({ authenticated: false });
+    }
+  }
+
+  async function handleLogin() {
+    window.location.href = "/api/auth/github?action=login";
+  }
+
+  async function handleLogout() {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      setAuthStatus({ authenticated: false });
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  }
 
   async function handleScan(e: React.FormEvent) {
     e.preventDefault();
@@ -105,18 +159,56 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-zinc-800 px-6 py-4">
-        <div className="mx-auto max-w-4xl flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
-            <svg className="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-            </svg>
+        <div className="mx-auto max-w-4xl flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
+              <svg className="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+              </svg>
+            </div>
+            <h1 className="text-lg font-semibold text-zinc-100">GitGuard</h1>
+            <span className="text-sm text-zinc-500">Secret Scanner</span>
           </div>
-          <h1 className="text-lg font-semibold text-zinc-100">GitGuard</h1>
-          <span className="text-sm text-zinc-500">Secret Scanner</span>
+          
+          {authStatus && (
+            <div className="flex items-center gap-3">
+              {authStatus.authenticated ? (
+                <>
+                  {authStatus.user?.avatar_url && (
+                    <img
+                      src={authStatus.user.avatar_url}
+                      alt={authStatus.user.login}
+                      className="h-8 w-8 rounded-full"
+                    />
+                  )}
+                  <span className="text-sm text-zinc-400">{authStatus.user?.login}</span>
+                  <button
+                    onClick={handleLogout}
+                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-700"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={handleLogin}
+                  className="rounded-lg bg-zinc-700 px-4 py-1.5 text-sm font-medium text-zinc-100 transition-colors hover:bg-zinc-600"
+                >
+                  Login with GitHub
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-8">
+        {authStatus?.authenticated && (
+          <div className="mb-4 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-400">
+            ✓ Authenticated with GitHub. You can scan private repositories.
+          </div>
+        )}
+        
         <form onSubmit={handleScan} className="flex gap-3">
           <input
             type="url"

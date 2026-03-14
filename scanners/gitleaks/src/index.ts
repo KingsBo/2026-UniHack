@@ -45,6 +45,7 @@ app.post("/scan", async (req: Request, res: Response) => {
 
   try {
     const repoUrl: string = req.body.repoUrl?.trim();
+    const githubToken: string | undefined = req.body.githubToken;
 
     if (!repoUrl || !GITHUB_URL_RE.test(repoUrl)) {
       res.status(400).json({
@@ -55,9 +56,32 @@ app.post("/scan", async (req: Request, res: Response) => {
 
     tmpDir = await mkdtemp(join(tmpdir(), "gitleaks-scan-"));
 
-    await execFileAsync("git", ["clone", "--depth", "1", repoUrl, tmpDir], {
-      timeout: CLONE_TIMEOUT,
-    });
+    // Clone with authentication if token is provided
+    if (githubToken) {
+      // Use token in URL for authenticated clone: https://token@github.com/owner/repo
+      // Remove .git suffix if present, then construct authenticated URL
+      const cleanUrl = repoUrl.replace(/\.git$/, "");
+      const url = new URL(cleanUrl);
+      const authenticatedUrl = `https://${githubToken}@${url.host}${url.pathname}${url.search}`;
+      
+      await execFileAsync("git", ["clone", "--depth", "1", authenticatedUrl, tmpDir], {
+        timeout: CLONE_TIMEOUT,
+        env: { 
+          ...process.env, 
+          GIT_TERMINAL_PROMPT: "0",
+          GIT_ASKPASS: "echo", // Prevent git from prompting for credentials
+        },
+      });
+    } else {
+      // Public clone
+      await execFileAsync("git", ["clone", "--depth", "1", repoUrl, tmpDir], {
+        timeout: CLONE_TIMEOUT,
+        env: { 
+          ...process.env,
+          GIT_TERMINAL_PROMPT: "0",
+        },
+      });
+    }
 
     let stdout: string;
     try {
