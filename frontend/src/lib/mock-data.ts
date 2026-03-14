@@ -4,6 +4,8 @@ export const MOCK_REPOS: Repo[] = [
   {
     id: 'repo-1',
     name: 'api-gateway',
+    full_name: 'demo/api-gateway',
+    owner: 'demo',
     description: 'Core API gateway service with rate limiting and auth middleware',
     language: 'TypeScript',
     languageColor: '#F7DF1E',
@@ -16,6 +18,8 @@ export const MOCK_REPOS: Repo[] = [
   {
     id: 'repo-2',
     name: 'data-pipeline',
+    full_name: 'demo/data-pipeline',
+    owner: 'demo',
     description: 'ETL pipeline for processing and transforming customer analytics data',
     language: 'Python',
     languageColor: '#3572A5',
@@ -27,6 +31,8 @@ export const MOCK_REPOS: Repo[] = [
   {
     id: 'repo-3',
     name: 'auth-service',
+    full_name: 'demo/auth-service',
+    owner: 'demo',
     description: 'OAuth2 authentication service with JWT token management',
     language: 'Go',
     languageColor: '#00ADD8',
@@ -38,6 +44,8 @@ export const MOCK_REPOS: Repo[] = [
   {
     id: 'repo-4',
     name: 'frontend-app',
+    full_name: 'demo/frontend-app',
+    owner: 'demo',
     description: 'Next.js customer-facing application with dashboard and analytics',
     language: 'TypeScript',
     languageColor: '#F7DF1E',
@@ -49,6 +57,8 @@ export const MOCK_REPOS: Repo[] = [
   {
     id: 'repo-5',
     name: 'infra',
+    full_name: 'demo/infra',
+    owner: 'demo',
     description: 'Terraform and Helm charts for Kubernetes cluster provisioning',
     language: 'HCL',
     languageColor: '#844FBA',
@@ -60,6 +70,8 @@ export const MOCK_REPOS: Repo[] = [
   {
     id: 'repo-6',
     name: 'ml-models',
+    full_name: 'demo/ml-models',
+    owner: 'demo',
     description: 'Training pipelines and model serving infrastructure',
     language: 'Python',
     languageColor: '#3572A5',
@@ -96,7 +108,7 @@ export const MOCK_SCAN_RESULT: ScanResult = {
     },
     {
       id: 'f-2',
-      tool: 'semgrep',
+      tool: 'gitleaks',
       severity: 'critical',
       title: 'SQL injection vulnerability',
       description:
@@ -108,7 +120,7 @@ export const MOCK_SCAN_RESULT: ScanResult = {
     },
     {
       id: 'f-3',
-      tool: 'semgrep',
+      tool: 'trivy',
       severity: 'high',
       title: 'Insecure deserialization with pickle',
       description:
@@ -131,7 +143,7 @@ export const MOCK_SCAN_RESULT: ScanResult = {
     },
     {
       id: 'f-5',
-      tool: 'semgrep',
+      tool: 'gitleaks',
       severity: 'high',
       title: 'Command injection via subprocess',
       description:
@@ -143,7 +155,7 @@ export const MOCK_SCAN_RESULT: ScanResult = {
     },
     {
       id: 'f-6',
-      tool: 'semgrep',
+      tool: 'trivy',
       severity: 'medium',
       title: 'Logging sensitive user data',
       description:
@@ -154,7 +166,7 @@ export const MOCK_SCAN_RESULT: ScanResult = {
     },
     {
       id: 'f-7',
-      tool: 'semgrep',
+      tool: 'trivy',
       severity: 'low',
       title: 'Use of outdated MD5 hash function',
       description:

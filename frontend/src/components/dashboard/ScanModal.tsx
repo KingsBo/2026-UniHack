@@ -1,67 +1,116 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Repo } from '@/types'
+import type { Repo, ScanResponse } from '@/types'
 
-type ScanStep = { id: number; label: string; status: 'pending' | 'running' | 'done' }
+type StepStatus = 'pending' | 'running' | 'done' | 'failed'
+type ScanStep = { id: number; label: string; status: StepStatus }
 
-const STEPS = [
+const INITIAL_STEPS: Omit<ScanStep, 'status'>[] = [
   { id: 0, label: 'Cloning repository' },
-  { id: 1, label: 'Running Semgrep — static analysis' },
-  { id: 2, label: 'Running Gitleaks — secret detection' },
-  { id: 3, label: 'Running Trivy — vulnerability scan' },
-  { id: 4, label: 'Aggregating findings' },
+  { id: 1, label: 'Running Gitleaks — secret detection' },
+  { id: 2, label: 'Running Trivy — vulnerability scan' },
+  { id: 3, label: 'Aggregating findings' },
 ]
-
-const STEP_DELAYS = [400, 900, 1800, 2700, 3500]
-const STEP_PCTS = [18, 40, 62, 80, 95]
 
 type Props = { repo: Repo | null; onClose: () => void }
 
 export default function ScanModal({ repo, onClose }: Props) {
   const router = useRouter()
-  const [steps, setSteps] = useState<ScanStep[]>(STEPS.map((s) => ({ ...s, status: 'pending' })))
+  const [steps, setSteps] = useState<ScanStep[]>([])
   const [progress, setProgress] = useState(0)
   const [done, setDone] = useState(false)
+  const [scanError, setScanError] = useState<string | null>(null)
+  const [scanResult, setScanResult] = useState<ScanResponse | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   const isOpen = !!repo
 
   useEffect(() => {
     if (!repo) return
-    setSteps(STEPS.map((s) => ({ ...s, status: 'pending' })))
+
+    const initSteps = INITIAL_STEPS.map((s) => ({ ...s, status: 'pending' as StepStatus }))
+    setSteps(initSteps)
     setProgress(0)
     setDone(false)
+    setScanError(null)
+    setScanResult(null)
 
-    const timers: ReturnType<typeof setTimeout>[] = []
+    const controller = new AbortController()
+    abortRef.current = controller
 
-    STEPS.forEach((step, idx) => {
-      timers.push(
-        setTimeout(() => {
-          setSteps((prev) =>
-            prev.map((s) => {
-              if (s.id === step.id) return { ...s, status: 'running' }
-              if (s.id === step.id - 1) return { ...s, status: 'done' }
-              return s
-            })
-          )
-          setProgress(STEP_PCTS[idx])
-        }, STEP_DELAYS[idx])
-      )
-    })
+    const runScan = async () => {
+      try {
+        setSteps((prev) => prev.map((s) => s.id === 0 ? { ...s, status: 'running' } : s))
+        setProgress(15)
 
-    timers.push(
-      setTimeout(() => {
-        setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })))
+        await new Promise((r) => setTimeout(r, 600))
+
+        setSteps((prev) => prev.map((s) => {
+          if (s.id === 0) return { ...s, status: 'done' }
+          if (s.id === 1 || s.id === 2) return { ...s, status: 'running' }
+          return s
+        }))
+        setProgress(40)
+
+        const res = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ owner: repo.owner, repo: repo.name }),
+          signal: controller.signal,
+        })
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: `Server error ${res.status}` }))
+          throw new Error(err.error || `Scan failed with status ${res.status}`)
+        }
+
+        const data: ScanResponse = await res.json()
+
+        setSteps((prev) => prev.map((s) => {
+          if (s.id <= 1) return { ...s, status: data.errors?.gitleaks ? 'failed' : 'done' }
+          if (s.id === 2) return { ...s, status: data.errors?.trivy ? 'failed' : 'done' }
+          if (s.id === 3) return { ...s, status: 'running' }
+          return s
+        }))
+        setProgress(85)
+
+        await new Promise((r) => setTimeout(r, 400))
+
+        setSteps((prev) => prev.map((s) => {
+          if (s.id === 3) return { ...s, status: 'done' }
+          return s
+        }))
         setProgress(100)
+        setScanResult(data)
         setDone(true)
-      }, 4400)
-    )
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') return
+        setScanError(e instanceof Error ? e.message : 'Scan failed')
+        setSteps((prev) => prev.map((s) => s.status === 'running' ? { ...s, status: 'failed' } : s))
+      }
+    }
 
-    return () => timers.forEach(clearTimeout)
+    runScan()
+
+    return () => {
+      controller.abort()
+    }
   }, [repo])
 
+  const handleViewReport = () => {
+    if (!scanResult || !repo) return
+    const scanId = `scan-${Date.now()}`
+    sessionStorage.setItem(scanId, JSON.stringify({ ...scanResult, repoName: repo.full_name }))
+    router.push(`/result/${scanId}`)
+  }
+
   if (!isOpen) return null
+
+  const totalFindings = scanResult
+    ? (scanResult.gitleaks?.summary.total ?? 0) + (scanResult.trivy?.summary.total ?? 0)
+    : 0
 
   return (
     <div
@@ -72,7 +121,6 @@ export default function ScanModal({ repo, onClose }: Props) {
       <div className="animate-scale-in w-full max-w-lg mx-4 rounded-2xl p-10 relative"
         style={{ background: 'var(--bg1)', border: '1px solid var(--border)', boxShadow: '0 24px 48px rgba(0,0,0,0.12)' }}>
 
-        {/* Close */}
         <button onClick={onClose}
           className="absolute top-5 right-5 w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all"
           style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
@@ -84,13 +132,12 @@ export default function ScanModal({ repo, onClose }: Props) {
         <p className="font-mono text-[11px] tracking-widest uppercase mb-1.5" style={{ color: 'var(--text-muted)' }}>// initiating scan</p>
         <h2 className="text-2xl font-extrabold tracking-tight mb-6" style={{ color: 'var(--text-primary)' }}>{repo.name}</h2>
 
-        {/* Meta grid */}
         <div className="grid grid-cols-2 gap-3 mb-7">
           {[
             { label: 'Branch', value: repo.defaultBranch },
-            { label: 'Language', value: repo.language },
+            { label: 'Language', value: repo.language || '—' },
             { label: 'Last commit', value: repo.updatedAt },
-            { label: 'Files', value: repo.fileCount.toString() },
+            { label: 'Visibility', value: repo.visibility },
           ].map(({ label, value }) => (
             <div key={label} className="px-3.5 py-3 rounded-lg" style={{ background: 'var(--bg2)', border: '1px solid var(--border)' }}>
               <p className="font-mono text-[10px] tracking-widest uppercase mb-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
@@ -107,9 +154,11 @@ export default function ScanModal({ repo, onClose }: Props) {
           </div>
           <div className="h-[3px] rounded-full overflow-hidden" style={{ background: 'var(--bg3)' }}>
             <div className="h-full rounded-full relative overflow-hidden transition-all duration-500 ease-out"
-              style={{ width: `${progress}%`, background: 'var(--accent)' }}>
-              <span className="animate-shimmer absolute inset-y-0 w-1/2"
-                style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)' }} />
+              style={{ width: `${progress}%`, background: scanError ? '#ef4444' : 'var(--accent)' }}>
+              {!scanError && (
+                <span className="animate-shimmer absolute inset-y-0 w-1/2"
+                  style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)' }} />
+              )}
             </div>
           </div>
         </div>
@@ -124,6 +173,8 @@ export default function ScanModal({ repo, onClose }: Props) {
                   ? { background: 'var(--green-dim)', border: '1px solid rgba(45,217,143,0.2)', color: 'var(--green)' }
                   : step.status === 'running'
                   ? { background: 'var(--accent-dim)', border: '1px solid rgba(123,110,246,0.25)', color: 'var(--text-primary)' }
+                  : step.status === 'failed'
+                  ? { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444' }
                   : { background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-muted)' }
               }>
               <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] flex-shrink-0 ${step.status === 'running' ? 'animate-spin-step' : ''}`}
@@ -132,22 +183,30 @@ export default function ScanModal({ repo, onClose }: Props) {
                     ? { background: 'var(--green)', color: '#fff' }
                     : step.status === 'running'
                     ? { background: 'var(--accent)', color: '#fff' }
+                    : step.status === 'failed'
+                    ? { background: '#ef4444', color: '#fff' }
                     : { background: 'var(--bg3)', border: '1px solid var(--border)' }
                 }>
-                {step.status === 'done' ? '✓' : step.status === 'running' ? '↻' : ''}
+                {step.status === 'done' ? '✓' : step.status === 'running' ? '↻' : step.status === 'failed' ? '✕' : ''}
               </span>
               {step.label}
             </div>
           ))}
         </div>
 
+        {scanError && (
+          <p className="font-mono text-xs text-center mb-4" style={{ color: '#ef4444' }}>
+            ✕ {scanError}
+          </p>
+        )}
+
         {done && (
           <>
             <p className="font-mono text-xs text-center mb-4" style={{ color: 'var(--green)' }}>
-              ✓ scan complete — 7 findings detected
+              ✓ scan complete — {totalFindings} finding{totalFindings !== 1 ? 's' : ''} detected
             </p>
             <button
-              onClick={() => router.push('/result/demo')}
+              onClick={handleViewReport}
               className="w-full py-3.5 text-sm font-semibold tracking-wide text-white rounded-lg transition-all hover:-translate-y-px"
               style={{ background: 'var(--accent)' }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(123,110,246,0.35)' }}
