@@ -13,3 +13,18 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+
+  trivy-scanner:
+    build:
+      context: .
+      dockerfile: scanners/trivy/Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3002/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 30s

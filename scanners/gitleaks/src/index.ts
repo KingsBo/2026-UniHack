@@ -12,8 +12,6 @@ const GITLEAKS_BIN = process.env.GITLEAKS_BIN || "/usr/local/bin/gitleaks";
 const CLONE_TIMEOUT = 60_000;
 const SCAN_TIMEOUT = 120_000;
 
-const GITHUB_URL_RE = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+(\.git)?$/;
-
 interface Finding {
   RuleID: string;
   Description: string;
@@ -33,6 +31,14 @@ interface Finding {
   Fingerprint: string;
 }
 
+function buildCloneUrl(repoUrl: string, token?: string): string {
+  if (!token) return repoUrl;
+  const url = new URL(repoUrl);
+  url.username = "x-access-token";
+  url.password = token;
+  return url.toString();
+}
+
 const app = express();
 app.use(express.json());
 
@@ -45,17 +51,17 @@ app.post("/scan", async (req: Request, res: Response) => {
 
   try {
     const repoUrl: string = req.body.repoUrl?.trim();
+    const token: string | undefined = req.body.token;
 
-    if (!repoUrl || !GITHUB_URL_RE.test(repoUrl)) {
-      res.status(400).json({
-        error: "Invalid GitHub repository URL. Expected: https://github.com/owner/repo",
-      });
+    if (!repoUrl) {
+      res.status(400).json({ error: "Missing repoUrl" });
       return;
     }
 
     tmpDir = await mkdtemp(join(tmpdir(), "gitleaks-scan-"));
 
-    await execFileAsync("git", ["clone", "--depth", "1", repoUrl, tmpDir], {
+    const cloneUrl = buildCloneUrl(repoUrl, token);
+    await execFileAsync("git", ["clone", "--depth", "1", cloneUrl, tmpDir], {
       timeout: CLONE_TIMEOUT,
     });
 
@@ -98,8 +104,9 @@ app.post("/scan", async (req: Request, res: Response) => {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("Scan failed:", message);
-    res.status(500).json({ error: `Scan failed: ${message}` });
+    const safeMessage = message.replace(/x-access-token:[^@]+@/g, "x-access-token:***@");
+    console.error("Scan failed:", safeMessage);
+    res.status(500).json({ error: `Scan failed: ${safeMessage}` });
   } finally {
     if (tmpDir) {
       await rm(tmpDir, { recursive: true, force: true }).catch(() => {});

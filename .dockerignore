@@ -1,4 +1,5 @@
 gitleaks/
+trivy/
 frontend/node_modules
 frontend/.next
 .git
