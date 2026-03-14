@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/?error=token_failed", request.url));
   }
 
-  const response = NextResponse.redirect(new URL("/", request.url));
+  const response = NextResponse.redirect(new URL("/dashboard", request.url));
 
   response.cookies.set("github_token", tokenData.access_token, {
     httpOnly: true,

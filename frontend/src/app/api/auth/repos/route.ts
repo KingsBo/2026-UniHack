@@ -37,6 +37,8 @@ export async function GET(request: NextRequest) {
           private: r.private,
           html_url: r.html_url,
           description: r.description,
+          language: r.language,
+          default_branch: r.default_branch,
           updated_at: r.updated_at,
         });
       }
