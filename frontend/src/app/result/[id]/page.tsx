@@ -9,9 +9,9 @@ import FindingCard from '@/components/results/FindingCard'
 import type { ScanTool, ScanResult, Finding, Severity } from '@/types'
 
 const TOOLS: { key: 'all' | ScanTool; label: string }[] = [
-  { key: 'all',        label: 'All tools' },
-  { key: 'gitleaks',   label: 'Gitleaks' },
-  { key: 'trivy',      label: 'Trivy' },
+  { key: 'all', label: 'All tools' },
+  { key: 'gitleaks', label: 'Gitleaks' },
+  { key: 'trivy', label: 'Trivy' },
 ]
 
 const SEV_ORDER: Severity[] = ['critical', 'high', 'medium', 'low', 'info']
@@ -105,7 +105,7 @@ function buildAiSummary(scan: ScanResult) {
   const byTool: Record<string, number> = {}
 
   for (const f of findings) {
-    ;(bySev[f.severity] ??= []).push(f)
+    ; (bySev[f.severity] ??= []).push(f)
     byTool[f.tool] = (byTool[f.tool] || 0) + 1
   }
 
@@ -217,6 +217,7 @@ export default function ResultPage() {
   const scanId = params.id as string
   const [scan, setScan] = useState<ScanResult | null>(null)
   const [activeTool, setActiveTool] = useState<'all' | ScanTool>('all')
+  const [activeSev, setActiveSev] = useState<Severity | 'all'>('all')
   const [showAiSummary, setShowAiSummary] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -266,10 +267,9 @@ export default function ResultPage() {
     )
   }
 
-  const filtered =
-    activeTool === 'all'
-      ? scan.findings
-      : scan.findings.filter((f) => f.tool === activeTool)
+  const filtered = scan.findings
+    .filter((f) => activeTool === 'all' || f.tool === activeTool)
+    .filter((f) => activeSev === 'all' || f.severity === activeSev)
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg0)' }}>
@@ -285,7 +285,7 @@ export default function ResultPage() {
           ← back to dashboard
         </Link>
 
-        <ScanSummaryBar scan={scan} />
+        <ScanSummaryBar scan={scan} activeSev={activeSev} onSevChange={setActiveSev} />
 
         {/* Tool filter tabs and Actions */}
         <div
@@ -293,35 +293,35 @@ export default function ResultPage() {
           style={{ borderBottom: '1px solid var(--border)' }}
         >
           <div className="flex items-center gap-2 flex-wrap">
-          {TOOLS.map(({ key, label }) => {
-            const count = key === 'all'
-              ? scan.findings.length
-              : scan.findings.filter((f) => f.tool === key).length
-            return (
-              <button
-                key={key}
-                onClick={() => setActiveTool(key)}
-                className="flex items-center gap-2 px-4 py-2 font-mono text-[11px] tracking-widest uppercase rounded-lg transition-all"
-                style={
-                  activeTool === key
-                    ? { background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid rgba(123,110,246,0.25)' }
-                    : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }
-                }
-              >
-                {label}
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded"
+            {TOOLS.map(({ key, label }) => {
+              const count = key === 'all'
+                ? scan.findings.length
+                : scan.findings.filter((f) => f.tool === key).length
+              return (
+                <button
+                  key={key}
+                  onClick={() => setActiveTool(key)}
+                  className="flex items-center gap-2 px-4 py-2 font-mono text-[11px] tracking-widest uppercase rounded-lg transition-all"
                   style={
                     activeTool === key
-                      ? { background: 'rgba(123,110,246,0.2)', color: 'var(--accent)' }
-                      : { background: 'var(--bg2)', color: 'var(--text-muted)' }
+                      ? { background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid rgba(123,110,246,0.25)' }
+                      : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }
                   }
                 >
-                  {count}
-                </span>
-              </button>
-            )
-          })}
+                  {label}
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded"
+                    style={
+                      activeTool === key
+                        ? { background: 'rgba(123,110,246,0.2)', color: 'var(--accent)' }
+                        : { background: 'var(--bg2)', color: 'var(--text-muted)' }
+                    }
+                  >
+                    {count}
+                  </span>
+                </button>
+              )
+            })}
           </div>
 
           {/* AI Toggle */}
@@ -335,9 +335,9 @@ export default function ResultPage() {
             }
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={showAiSummary ? "text-white" : ""}>
-              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
             </svg>
-            {showAiSummary ? 'Hide AI Summary' : 'AI Security Summary'}
+            {showAiSummary ? 'Hide AI Summary' : 'AI Summary'}
           </button>
         </div>
 
@@ -363,7 +363,7 @@ export default function ResultPage() {
                 <div className="flex items-center gap-3">
                   <span className="flex items-center justify-center w-10 h-10 rounded-full" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
                     </svg>
                   </span>
                   <div>
@@ -417,10 +417,10 @@ export default function ResultPage() {
                         if (count === 0) return null
                         const colors: Record<string, { color: string; bg: string }> = {
                           critical: { color: '#F25C5C', bg: 'rgba(242,92,92,0.08)' },
-                          high:     { color: '#F58025', bg: 'rgba(245,128,37,0.08)' },
-                          medium:   { color: '#F5A623', bg: 'rgba(245,166,35,0.08)' },
-                          low:      { color: '#2DD98F', bg: 'rgba(45,217,143,0.08)' },
-                          info:     { color: '#7B6EF6', bg: 'rgba(123,110,246,0.08)' },
+                          high: { color: '#F58025', bg: 'rgba(245,128,37,0.08)' },
+                          medium: { color: '#F5A623', bg: 'rgba(245,166,35,0.08)' },
+                          low: { color: '#2DD98F', bg: 'rgba(45,217,143,0.08)' },
+                          info: { color: '#7B6EF6', bg: 'rgba(123,110,246,0.08)' },
                         }
                         const c = colors[sev] ?? colors.info
                         return (

@@ -19,7 +19,13 @@ function formatDuration(ms?: number) {
   return `${Math.floor(s / 60)}m ${s % 60}s`
 }
 
-export default function ScanSummaryBar({ scan }: { scan: ScanResult }) {
+type Props = {
+  scan: ScanResult
+  activeSev?: Severity | 'all'
+  onSevChange?: (sev: Severity | 'all') => void
+}
+
+export default function ScanSummaryBar({ scan, activeSev = 'all', onSevChange }: Props) {
   return (
     <div className="mb-10">
       {/* Title row */}
@@ -33,16 +39,25 @@ export default function ScanSummaryBar({ scan }: { scan: ScanResult }) {
           </p>
         </div>
 
-        {/* Severity pills */}
+        {/* Severity pills — clickable filters */}
         <div className="flex items-center gap-2 flex-wrap">
           {SEV_CONFIG.map(({ key, label, color, bg, border }) => {
             const count = countBySeverity(scan.findings, key)
+            const isActive = activeSev === key
             return (
-              <div key={key} className="flex items-center gap-2 px-4 py-2 rounded-lg"
-                style={{ background: bg, border: `1px solid ${border}` }}>
+              <button
+                key={key}
+                onClick={() => onSevChange?.(isActive ? 'all' : key)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
+                style={{
+                  background: bg,
+                  border: `1px solid ${isActive ? color : border}`,
+                  cursor: onSevChange ? 'pointer' : 'default',
+                }}
+              >
                 <span className="font-mono text-[11px] font-bold tracking-widest uppercase leading-none" style={{ color }}>{label}</span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: bg, color }}>{count}</span>
-              </div>
+              </button>
             )
           })}
         </div>
