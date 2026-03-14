@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { MOCK_SCAN_HISTORY } from '@/lib/mock-data'
 import type { ScanHistoryEntry, ScanStatus } from '@/types'
 
 function formatDuration(ms?: number) {
@@ -28,12 +27,19 @@ function statusStyle(status: ScanStatus) {
 export default function HistoryPage() {
   const [filter, setFilter] = useState('')
   const [loading, setLoading] = useState(true)
+  const [entries, setEntries] = useState<ScanHistoryEntry[]>([])
 
   useEffect(() => {
-    const t = window.setTimeout(() => setLoading(false), 500)
-    return () => window.clearTimeout(t)
+    fetch('/api/history')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setEntries(data)
+      })
+      .catch((err) => console.error('Failed to load history:', err))
+      .finally(() => setLoading(false))
   }, [])
-  const filtered = MOCK_SCAN_HISTORY.filter((e) =>
+
+  const filtered = entries.filter((e) =>
     e.repoName.toLowerCase().includes(filter.toLowerCase())
   )
 
@@ -118,7 +124,7 @@ export default function HistoryPage() {
                       </td>
                       <td className="py-3 px-5">
                         <Link
-                          href={entry.id === 'scan-1' ? '/result/demo' : `/result/${entry.id}`}
+                          href={`/result/${entry.id}`}
                           className="text-xs font-medium"
                           style={{ color: 'var(--accent)' }}
                         >
@@ -132,7 +138,7 @@ export default function HistoryPage() {
         </table>
       </div>
 
-      {filtered.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <div className="py-20 text-center font-mono text-sm" style={{ color: 'var(--text-muted)' }}>
           No scans match your filter.
         </div>
