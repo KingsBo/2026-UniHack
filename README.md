@@ -37,6 +37,20 @@ MUST CHECK BEFORE RUNNING NPM RUN DEV
 3. Add ``scanner-invoker-key.json`` in root with the proper credentials
 4. Stupid mistake I made but make sure all localhost3000 proccess are killed
 
+
+If you get this error message
+```details: "resolve 'tailwindcss' in '/home/*/Desktop/2026-UniHack'\n" +
+    '  Parsed request is a module\n' +
+    '  using description file: /home/*/Desktop/2026-UniHack/package.json (relative path: .)\n' +
+    '    resolve as module\n' +
+    "      /home/*/Desktop/2026-UniHack/node_modules doesn't exist or is not a directory\n" +
+    "      /home/*/Desktop/node_modules doesn't exist or is not a directory\n" +
+    "      /home/*/node_modules doesn't exist or is not a directory\n" +
+    "      /home/node_modules doesn't exist or is not a directory\n" +
+    "      /node_modules doesn't exist or is not a directory"
+```
+check npm install and if that doesn't work then just rm -rf the whole repo and git clone it again (dont ask me why it works, just do it)
+
 Then you can run
 
 ```bash
