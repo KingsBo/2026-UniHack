@@ -1,0 +1,15 @@
+services:
+  gitleaks-scanner:
+    build:
+      context: .
+      dockerfile: scanners/gitleaks/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
