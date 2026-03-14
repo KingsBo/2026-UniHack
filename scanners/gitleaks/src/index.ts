@@ -64,23 +64,65 @@ app.post("/scan", async (req: Request, res: Response) => {
       const url = new URL(cleanUrl);
       const authenticatedUrl = `https://${githubToken}@${url.host}${url.pathname}${url.search}`;
       
-      await execFileAsync("git", ["clone", "--depth", "1", authenticatedUrl, tmpDir], {
-        timeout: CLONE_TIMEOUT,
-        env: { 
-          ...process.env, 
-          GIT_TERMINAL_PROMPT: "0",
-          GIT_ASKPASS: "echo", // Prevent git from prompting for credentials
-        },
-      });
+      try {
+        await execFileAsync("git", ["clone", "--depth", "1", authenticatedUrl, tmpDir], {
+          timeout: CLONE_TIMEOUT,
+          env: { 
+            ...process.env, 
+            GIT_TERMINAL_PROMPT: "0",
+            GIT_ASKPASS: "echo", // Prevent git from prompting for credentials
+          },
+        });
+      } catch (cloneErr: unknown) {
+        const err = cloneErr as { stderr?: string; message?: string };
+        const errorMsg = err.stderr || err.message || "";
+        
+        if (errorMsg.includes("Repository not found") || errorMsg.includes("404")) {
+          res.status(404).json({
+            error: "Repository not found. It may be private and you don't have access, or the repository doesn't exist.",
+            errorType: "REPO_NOT_FOUND",
+          });
+          return;
+        }
+        if (errorMsg.includes("Authentication failed") || errorMsg.includes("401")) {
+          res.status(403).json({
+            error: "Authentication failed. Please log in again.",
+            errorType: "AUTH_FAILED",
+          });
+          return;
+        }
+        throw cloneErr;
+      }
     } else {
       // Public clone
-      await execFileAsync("git", ["clone", "--depth", "1", repoUrl, tmpDir], {
-        timeout: CLONE_TIMEOUT,
-        env: { 
-          ...process.env,
-          GIT_TERMINAL_PROMPT: "0",
-        },
-      });
+      try {
+        await execFileAsync("git", ["clone", "--depth", "1", repoUrl, tmpDir], {
+          timeout: CLONE_TIMEOUT,
+          env: { 
+            ...process.env,
+            GIT_TERMINAL_PROMPT: "0",
+          },
+        });
+      } catch (cloneErr: unknown) {
+        const err = cloneErr as { stderr?: string; message?: string };
+        const errorMsg = err.stderr || err.message || "";
+        
+        if (errorMsg.includes("Repository not found") || errorMsg.includes("404")) {
+          res.status(404).json({
+            error: "Repository not found or is private. Please log in with GitHub to scan private repositories.",
+            errorType: "REPO_NOT_FOUND_OR_PRIVATE",
+          });
+          return;
+        }
+        if (errorMsg.includes("could not read Username") || errorMsg.includes("Authentication")) {
+          res.status(403).json({
+            error: "This appears to be a private repository. Please log in with GitHub to scan private repositories.",
+            errorType: "PRIVATE_REPO",
+          });
+          return;
+        }
+        throw cloneErr;
+      }
     }
 
     let stdout: string;

@@ -17,12 +17,19 @@ This guide will help you set up GitHub OAuth so the scanner can access private r
 
 ## Step 2: Configure Environment Variables
 
-1. Copy the example environment file:
+**⚠️ IMPORTANT: The `.env` file is required for OAuth to work!**
+
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Copy the example environment file:
    ```bash
    cp .env.example .env
    ```
 
-2. Edit `.env` in the `frontend/` directory and add your credentials:
+3. Edit `.env` and add your GitHub OAuth credentials:
    ```env
    GITHUB_CLIENT_ID=your_client_id_here
    GITHUB_CLIENT_SECRET=your_client_secret_here

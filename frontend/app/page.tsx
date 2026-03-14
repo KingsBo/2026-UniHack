@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Finding, ScanResponse, ScanError } from "@/lib/types";
+import type { Finding, ScanResponse, ScanError, Repo } from "@/lib/types";
+import AuthButton from "./components/AuthButton";
 
 function maskSecret(secret: string): string {
   if (secret.length <= 8) return "••••••••";
@@ -81,6 +82,9 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [scannedRepo, setScannedRepo] = useState<string | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
+  const [repos, setRepos] = useState<Repo[]>([]);
+  const [loadingRepos, setLoadingRepos] = useState(false);
+  const [useManualInput, setUseManualInput] = useState(false);
 
   useEffect(() => {
     // Check auth status on mount
@@ -95,6 +99,8 @@ export default function Home() {
       checkAuthStatus();
       // Clean URL
       window.history.replaceState({}, "", window.location.pathname);
+      // Fetch repos after successful auth
+      setTimeout(() => fetchRepos(), 500);
     }
     
     if (errorParam) {
@@ -108,8 +114,28 @@ export default function Home() {
       const res = await fetch("/api/auth/status");
       const data: AuthStatus = await res.json();
       setAuthStatus(data);
+      
+      // Fetch repos if authenticated
+      if (data.authenticated) {
+        fetchRepos();
+      }
     } catch {
       setAuthStatus({ authenticated: false });
+    }
+  }
+
+  async function fetchRepos() {
+    setLoadingRepos(true);
+    try {
+      const res = await fetch("/api/repos");
+      if (res.ok) {
+        const data = await res.json();
+        setRepos(data.repos || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch repos:", err);
+    } finally {
+      setLoadingRepos(false);
     }
   }
 
@@ -121,6 +147,9 @@ export default function Home() {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
       setAuthStatus({ authenticated: false });
+      setRepos([]);
+      setRepoUrl("");
+      setUseManualInput(false);
     } catch (err) {
       console.error("Logout failed:", err);
     }
@@ -143,7 +172,24 @@ export default function Home() {
       const data: ScanResponse | ScanError = await res.json();
 
       if ("error" in data) {
-        setError(data.error);
+        // Handle specific error types with better messages
+        let errorMessage = data.error;
+        
+        if (data.errorType === "REPO_NOT_FOUND_OR_PRIVATE") {
+          errorMessage = "Repository not found or is private. Please log in with GitHub to scan private repositories.";
+        } else if (data.errorType === "PRIVATE_REPO") {
+          errorMessage = "This appears to be a private repository. Please log in with GitHub to scan private repositories.";
+        } else if (data.errorType === "REPO_NOT_FOUND") {
+          errorMessage = "Repository not found. It may be private and you don't have access, or the repository doesn't exist.";
+        } else if (data.errorType === "AUTH_FAILED") {
+          errorMessage = "Authentication failed. Please log out and log in again.";
+        } else if (res.status === 404) {
+          errorMessage = "Repository not found. Please check the URL and try again.";
+        } else if (res.status === 403) {
+          errorMessage = "Access denied. This repository may be private - please log in with GitHub.";
+        }
+        
+        setError(errorMessage);
         return;
       }
 
@@ -170,35 +216,11 @@ export default function Home() {
             <span className="text-sm text-zinc-500">Secret Scanner</span>
           </div>
           
-          {authStatus && (
-            <div className="flex items-center gap-3">
-              {authStatus.authenticated ? (
-                <>
-                  {authStatus.user?.avatar_url && (
-                    <img
-                      src={authStatus.user.avatar_url}
-                      alt={authStatus.user.login}
-                      className="h-8 w-8 rounded-full"
-                    />
-                  )}
-                  <span className="text-sm text-zinc-400">{authStatus.user?.login}</span>
-                  <button
-                    onClick={handleLogout}
-                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-700"
-                  >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={handleLogin}
-                  className="rounded-lg bg-zinc-700 px-4 py-1.5 text-sm font-medium text-zinc-100 transition-colors hover:bg-zinc-600"
-                >
-                  Login with GitHub
-                </button>
-              )}
-            </div>
-          )}
+          <AuthButton
+            authStatus={authStatus}
+            onLogin={handleLogin}
+            onLogout={handleLogout}
+          />
         </div>
       </header>
 
@@ -209,23 +231,72 @@ export default function Home() {
           </div>
         )}
         
-        <form onSubmit={handleScan} className="flex gap-3">
-          <input
-            type="url"
-            value={repoUrl}
-            onChange={(e) => setRepoUrl(e.target.value)}
-            placeholder="https://github.com/owner/repo"
-            required
-            disabled={scanning}
-            className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 disabled:opacity-50"
-          />
+        <form onSubmit={handleScan} className="space-y-3">
+          {authStatus?.authenticated && repos.length > 0 && !useManualInput ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-zinc-300">Select Repository</label>
+                <button
+                  type="button"
+                  onClick={() => setUseManualInput(true)}
+                  className="text-xs text-zinc-400 hover:text-zinc-300 transition-colors"
+                >
+                  Or enter URL manually
+                </button>
+              </div>
+              <select
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                disabled={scanning || loadingRepos}
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100 outline-none transition-colors focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 disabled:opacity-50"
+                required
+              >
+                <option value="">Select a repository...</option>
+                {repos.map((repo) => (
+                  <option key={repo.id} value={repo.cloneUrl}>
+                    {repo.fullName} {repo.private ? "🔒" : ""} {repo.description ? `- ${repo.description}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {authStatus?.authenticated && (
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-zinc-300">Repository URL</label>
+                  {repos.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseManualInput(false);
+                        setRepoUrl("");
+                      }}
+                      className="text-xs text-zinc-400 hover:text-zinc-300 transition-colors"
+                    >
+                      Or select from your repos
+                    </button>
+                  )}
+                </div>
+              )}
+              <input
+                type="url"
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                placeholder="https://github.com/owner/repo"
+                required
+                disabled={scanning}
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 disabled:opacity-50"
+              />
+            </div>
+          )}
+          
           <button
             type="submit"
-            disabled={scanning}
-            className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={scanning || !repoUrl}
+            className="w-full rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {scanning ? (
-              <span className="flex items-center gap-2">
+              <span className="flex items-center justify-center gap-2">
                 <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -233,7 +304,7 @@ export default function Home() {
                 Scanning...
               </span>
             ) : (
-              "Scan"
+              "Scan Repository"
             )}
           </button>
         </form>

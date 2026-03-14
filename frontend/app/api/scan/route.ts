@@ -26,6 +26,11 @@ export async function POST(request: NextRequest) {
 
     const data = await scanRes.json();
 
+    // Preserve error type and message from scanner
+    if (!scanRes.ok) {
+      return NextResponse.json(data, { status: scanRes.status });
+    }
+
     return NextResponse.json(data, { status: scanRes.status });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
