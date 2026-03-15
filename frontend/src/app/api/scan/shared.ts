@@ -10,6 +10,12 @@ let authClient: Impersonated | GoogleAuth | null = null;
 export function getGoogleAuth(): Impersonated | GoogleAuth | null {
   if (authClient) return authClient;
 
+  console.log({
+    hasOidcToken: !!process.env.VERCEL_OIDC_TOKEN,
+    hasProjectNum: !!process.env.GCP_PROJECT_NUMBER,
+    hasEmail: !!process.env.GCP_SERVICE_ACCOUNT_EMAIL,
+  });
+
   if (process.env.VERCEL_OIDC_TOKEN && process.env.GCP_PROJECT_NUMBER && process.env.GCP_SERVICE_ACCOUNT_EMAIL) {
     const externalClient = ExternalAccountClient.fromJSON({
       type: "external_account",
