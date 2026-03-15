@@ -6,10 +6,14 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 
 const LogoMark = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="shrink-0" style={{ color: 'var(--accent)' }}>
-    <polygon points="12,2 22,8 22,16 12,22 2,16 2,8" stroke="currentColor" strokeWidth="1.5" fill="none" />
-    <polygon points="12,6 18,9.5 18,14.5 12,18 6,14.5 6,9.5" fill="var(--accent-dim)" stroke="currentColor" strokeWidth="0.5" />
-    <circle cx="12" cy="12" r="2" fill="currentColor" />
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="shrink-0" style={{ color: 'var(--accent)' }}>
+    {/* Equal Hexagon Outline */}
+    <polygon points="12,2 20.66,7 20.66,17 12,22 3.34,17 3.34,7" stroke="currentColor" strokeWidth="1.5" />
+    {/* Abstract Kestrel Silhouette (Clean) */}
+    <path 
+      d="M12 18C12 18 13.5 14.5 18 9C15 10 13.5 11 12 12C10.5 11 9 10 6 9C10.5 14.5 12 18 12 18Z" 
+      fill="currentColor" 
+    />
   </svg>
 )
 
