@@ -56,6 +56,7 @@ export interface ScanResult {
   durationMs?: number
   fileCount: number
   findings: Finding[]
+  aiSummary?: string | null
 }
 
 export interface ScanStep {
