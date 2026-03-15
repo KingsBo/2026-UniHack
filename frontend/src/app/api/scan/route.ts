@@ -76,7 +76,6 @@ export async function POST(request: NextRequest) {
         .select("scan_limit")
         .eq("id", user.id)
         .single();
-
       const scanLimit = userRow?.scan_limit ?? DEFAULT_SCAN_LIMIT;
 
       const { count, error: countErr } = await supabase

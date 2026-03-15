@@ -176,17 +176,55 @@ export async function GET(
     primaryUrl: r.primary_url,
   }));
 
+  // Derive commit SHA: try gitleaks findings first, then fetch HEAD from GitHub
+  let commitSha =
+    findings.find((f: Record<string, unknown>) => f.commit)?.commit as string | undefined;
+
+  if (commitSha) {
+    commitSha = commitSha.slice(0, 7);
+  } else {
+    // Fetch the latest commit on the scanned branch from GitHub
+    const repoFullName = repo?.full_name as string | undefined;
+    const branch = scan.branch || "main";
+    const ghToken = (user as Record<string, unknown>).token as string | undefined;
+
+    if (repoFullName && ghToken) {
+      try {
+        const ghRes = await fetch(
+          `https://api.github.com/repos/${repoFullName}/commits/${branch}`,
+          {
+            headers: {
+              Authorization: `Bearer ${ghToken}`,
+              Accept: "application/vnd.github.v3+json",
+            },
+          },
+        );
+        if (ghRes.ok) {
+          const ghData = await ghRes.json();
+          commitSha = (ghData.sha as string)?.slice(0, 7) || undefined;
+        }
+      } catch {
+        // Ignore GitHub fetch errors
+      }
+    }
+  }
+
+  // Compute unique file count from findings
+  const uniqueFiles = new Set(
+    findings.map((f: Record<string, unknown>) => f.file as string).filter(Boolean)
+  );
+
   return NextResponse.json({
     id: scan.id,
     repoId: repo?.id || "",
     repoName: (repo?.name as string) || "unknown",
     status: scan.status === "completed" ? "complete" : scan.status,
     branch: scan.branch || "main",
-    commitSha: "—",
+    commitSha: commitSha || "—",
     startedAt: scan.started_at,
     completedAt: scan.completed_at,
     durationMs: scan.duration_ms,
-    fileCount: 0,
+    fileCount: uniqueFiles.size,
     findings,
     aiSummary: scan.ai_summary || null,
   });
