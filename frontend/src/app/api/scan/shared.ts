@@ -1,44 +1,35 @@
-import { GoogleAuth, ExternalAccountClient, Impersonated } from "google-auth-library";
+import { GoogleAuth } from "google-auth-library";
+import { getVercelOidcToken } from "@vercel/oidc";
 
 export const GITLEAKS_SERVICE_URL =
   process.env.GITLEAKS_SERVICE_URL || "http://localhost:3001";
 export const TRIVY_SERVICE_URL =
   process.env.TRIVY_SERVICE_URL || "http://localhost:3002";
 
-let authClient: Impersonated | GoogleAuth | null = null;
+let googleAuth: GoogleAuth | null = null;
 
-export function getGoogleAuth(): Impersonated | GoogleAuth | null {
-  if (authClient) return authClient;
+export function getGoogleAuth(): GoogleAuth | null {
+  if (googleAuth) return googleAuth;
 
-  console.log({
-    hasOidcToken: !!process.env.VERCEL_OIDC_TOKEN,
-    hasProjectNum: !!process.env.GCP_PROJECT_NUMBER,
-    hasEmail: !!process.env.GCP_SERVICE_ACCOUNT_EMAIL,
-  });
-
-  if (process.env.VERCEL_OIDC_TOKEN && process.env.GCP_PROJECT_NUMBER && process.env.GCP_SERVICE_ACCOUNT_EMAIL) {
-    const externalClient = ExternalAccountClient.fromJSON({
-      type: "external_account",
-      audience: `//iam.googleapis.com/projects/${process.env.GCP_PROJECT_NUMBER}/locations/global/workloadIdentityPools/vercel-pool/providers/vercel-provider`,
-      subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
-      token_url: "https://sts.googleapis.com/v1/token",
-      subject_token_supplier: {
-        getSubjectToken: async () => process.env.VERCEL_OIDC_TOKEN!,
-      },
+  if (process.env.GCP_PROJECT_NUMBER && process.env.GCP_SERVICE_ACCOUNT_EMAIL) {
+    googleAuth = new GoogleAuth({
+      credentials: {
+        type: "external_account",
+        audience: `//iam.googleapis.com/projects/${process.env.GCP_PROJECT_NUMBER}/locations/global/workloadIdentityPools/vercel-pool/providers/vercel-provider`,
+        subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
+        token_url: "https://sts.googleapis.com/v1/token",
+        service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${process.env.GCP_SERVICE_ACCOUNT_EMAIL}:generateAccessToken`,
+        subject_token_supplier: {
+          getSubjectToken: getVercelOidcToken,
+        },
+      } as any,
     });
-
-    authClient = new Impersonated({
-      sourceClient: externalClient as any,
-      targetPrincipal: process.env.GCP_SERVICE_ACCOUNT_EMAIL,
-      targetScopes: ["https://www.googleapis.com/auth/cloud-platform"],
-    });
-
-    return authClient;
+    return googleAuth;
   }
 
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    authClient = new GoogleAuth();
-    return authClient;
+    googleAuth = new GoogleAuth();
+    return googleAuth;
   }
 
   return null;
@@ -49,32 +40,22 @@ export async function getAuthHeaders(
 ): Promise<Record<string, string>> {
   const auth = getGoogleAuth();
   
-  if (!auth) {
-    console.warn("Auth client is null. Falling back to unauthenticated request.");
-    return {};
-  }
-
-  if (!serviceUrl.includes(".run.app")) {
+  if (!auth || !serviceUrl.includes(".run.app")) {
     return {};
   }
 
   try {
-    if (auth instanceof Impersonated) {
-      const idToken = await auth.fetchIdToken(serviceUrl);
-      return { Authorization: `Bearer ${idToken}` };
-    } else {
-      const client = await auth.getIdTokenClient(serviceUrl);
-      const rawHeaders = await client.getRequestHeaders(serviceUrl);
-      
-      const authorization =
-        rawHeaders instanceof Headers
-          ? rawHeaders.get("Authorization")
-          : (rawHeaders as Record<string, string>).Authorization;
-          
-      return authorization ? { Authorization: authorization } : {};
-    }
-  } catch (err) {
-    console.error(`Failed to generate GCP ID Token for ${serviceUrl}:`, err);
+    const client = await auth.getIdTokenClient(serviceUrl);
+    const rawHeaders = await client.getRequestHeaders(serviceUrl);
+    
+    const authorization =
+      rawHeaders instanceof Headers
+        ? rawHeaders.get("Authorization")
+        : (rawHeaders as Record<string, string>).Authorization;
+        
+    return authorization ? { Authorization: authorization } : {};
+  } catch (error) {
+    console.error(`Failed to generate Auth Headers for ${serviceUrl}:`, error);
     return {};
   }
 }
@@ -90,12 +71,11 @@ export async function callScanner(serviceUrl: string, body: unknown) {
     },
     body: JSON.stringify(body),
   });
-  
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || `Scanner returned ${res.status}`);
   }
+  
   return res.json();
 }
-
-
