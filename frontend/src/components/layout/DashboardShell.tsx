@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Header from '@/components/layout/Header'
 import Sidebar from '@/components/layout/Sidebar'
 
-export default function DashboardShell({ children }: { children: React.ReactNode }) {
+export default function DashboardShell({ children, withSidebar = true }: { children: React.ReactNode, withSidebar?: boolean }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -32,9 +32,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
       <div className="flex flex-1">
         {/* Desktop sidebar */}
-        <div className="hidden md:block">
-          <Sidebar />
-        </div>
+        {withSidebar && (
+          <div className="hidden md:block">
+            <Sidebar />
+          </div>
+        )}
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
