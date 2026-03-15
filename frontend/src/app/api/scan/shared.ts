@@ -9,16 +9,29 @@ let googleAuth: GoogleAuth | null = null;
 
 export function getGoogleAuth(): GoogleAuth | null {
   if (googleAuth) return googleAuth;
+
+  if (process.env.VERCEL_OIDC_TOKEN && process.env.GCP_PROJECT_NUMBER) {
+    googleAuth = new GoogleAuth({
+      credentials: {
+        type: "external_account",
+        audience: `//iam.googleapis.com/projects/${process.env.GCP_PROJECT_NUMBER}/locations/global/workloadIdentityPools/vercel-pool/providers/vercel-provider`,
+        subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
+        token_url: "https://sts.googleapis.com/v1/token",
+        service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${process.env.GCP_SERVICE_ACCOUNT_EMAIL}:generateAccessToken`,
+        subject_token_supplier: {
+          // This tells the SDK to use the Vercel-provided token directly
+          getSubjectToken: async () => process.env.VERCEL_OIDC_TOKEN!,
+        },
+      } as any, 
+    });
+    return googleAuth;
+  }
+
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
     googleAuth = new GoogleAuth();
     return googleAuth;
   }
-  if (process.env.GCP_SERVICE_ACCOUNT_KEY) {
-    googleAuth = new GoogleAuth({
-      credentials: JSON.parse(process.env.GCP_SERVICE_ACCOUNT_KEY),
-    });
-    return googleAuth;
-  }
+
   return null;
 }
 
