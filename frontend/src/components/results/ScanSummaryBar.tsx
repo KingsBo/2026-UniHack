@@ -35,7 +35,7 @@ export default function ScanSummaryBar({ scan, activeSev = 'all', onSevChange }:
             {scan.repoName}
           </h1>
           <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
-            // scan complete · {scan.branch} · {scan.fileCount} files · {formatDuration(scan.durationMs)}
+            // scan complete · {scan.branch} · {scan.fileCount} {scan.fileCount === 1 ? 'file' : 'files'} · {formatDuration(scan.durationMs)}
           </p>
         </div>
 

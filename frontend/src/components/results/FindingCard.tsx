@@ -45,7 +45,7 @@ export default function FindingCard({ finding }: { finding: Finding }) {
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded font-mono text-[11px]"
             style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
             <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v2H2zm0 4h8v2H2zm0 4h10v2H2z" /></svg>
-            {finding.file} · line {finding.line}
+            {finding.file}{finding.line > 0 ? ` · line ${finding.line}` : ''}
           </div>
           <div className="flex items-end justify-between gap-4 mt-3 flex-wrap">
             <div className="flex items-center gap-2 flex-wrap">

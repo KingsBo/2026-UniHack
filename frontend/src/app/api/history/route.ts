@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/get-user";
 
-const MAX_SCANS_PER_USER = 3;
+const DEFAULT_SCAN_LIMIT = 3;
 
 export async function GET(request: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -12,6 +12,14 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.toLowerCase();
+
+  // Read per-user scan limit
+  const { data: userRow } = await supabase
+    .from("users")
+    .select("scan_limit")
+    .eq("id", user.id)
+    .single();
+  const scanLimit = userRow?.scan_limit ?? DEFAULT_SCAN_LIMIT;
 
   const query = supabase
     .from("scans")
@@ -49,7 +57,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     history,
     scansUsed: history.length,
-    scansLimit: MAX_SCANS_PER_USER,
-    scansRemaining: Math.max(0, MAX_SCANS_PER_USER - history.length),
+    scansLimit: scanLimit,
+    scansRemaining: Math.max(0, scanLimit - history.length),
   });
 }
