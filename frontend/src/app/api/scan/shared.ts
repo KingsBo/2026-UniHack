@@ -30,10 +30,10 @@ export function getGoogleAuth(): GoogleAuth | null {
     return googleAuth;
   }
 
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    googleAuth = new GoogleAuth();
-    return googleAuth;
-  }
+  // if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+  //   googleAuth = new GoogleAuth();
+  //   return googleAuth;
+  // }
 
   return null;
 }
@@ -41,15 +41,35 @@ export function getGoogleAuth(): GoogleAuth | null {
 export async function getAuthHeaders(
   serviceUrl: string
 ): Promise<Record<string, string>> {
+  console.log("OIDC Token present:", !!process.env.VERCEL_OIDC_TOKEN);
+
   const auth = getGoogleAuth();
-  if (!auth || !serviceUrl.includes(".run.app")) return {};
-  const client = await auth.getIdTokenClient(serviceUrl);
-  const rawHeaders = await client.getRequestHeaders(serviceUrl);
-  const authorization =
-    rawHeaders instanceof Headers
-      ? rawHeaders.get("Authorization")
-      : (rawHeaders as Record<string, string>).Authorization;
-  return authorization ? { Authorization: authorization } : {};
+  
+  if (!auth) {
+    console.warn("Auth client is null. Falling back to unauthenticated request.");
+    return {};
+  }
+
+  if (!serviceUrl.includes(".run.app")) {
+    console.warn(`Service URL ${serviceUrl} does not include '.run.app'. Skipping auth.`);
+    return {};
+  }
+
+  try {
+    const client = await auth.getIdTokenClient(serviceUrl);
+    const rawHeaders = await client.getRequestHeaders(serviceUrl);
+    
+    const authorization =
+      rawHeaders instanceof Headers
+        ? rawHeaders.get("Authorization")
+        : (rawHeaders as Record<string, string>).Authorization;
+        
+    return authorization ? { Authorization: authorization } : {};
+    
+  } catch (err) {
+    console.error(`Failed to generate GCP ID Token for ${serviceUrl}:`, err);
+    return {};
+  }
 }
 
 export async function callScanner(serviceUrl: string, body: unknown) {
