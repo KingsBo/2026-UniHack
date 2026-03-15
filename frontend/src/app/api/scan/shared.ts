@@ -1,4 +1,5 @@
 import { GoogleAuth } from "google-auth-library";
+import { getVercelOidcToken } from "@vercel/oidc";
 
 export const GITLEAKS_SERVICE_URL =
   process.env.GITLEAKS_SERVICE_URL || "http://localhost:3001";
@@ -10,7 +11,7 @@ let googleAuth: GoogleAuth | null = null;
 export function getGoogleAuth(): GoogleAuth | null {
   if (googleAuth) return googleAuth;
 
-  if (process.env.VERCEL_OIDC_TOKEN && process.env.GCP_PROJECT_NUMBER) {
+  if (process.env.GCP_PROJECT_NUMBER) {
     googleAuth = new GoogleAuth({
       credentials: {
         type: "external_account",
@@ -19,7 +20,10 @@ export function getGoogleAuth(): GoogleAuth | null {
         token_url: "https://sts.googleapis.com/v1/token",
         service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${process.env.GCP_SERVICE_ACCOUNT_EMAIL}:generateAccessToken`,
         subject_token_supplier: {
-          getSubjectToken: async () => process.env.VERCEL_OIDC_TOKEN!,
+          getSubjectToken: async () => {
+            const token = await getVercelOidcToken();
+            return token || '';
+          },
         },
       } as any, 
     });
