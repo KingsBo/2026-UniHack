@@ -33,7 +33,7 @@ const settingsItems = [
   { label: 'Preferences', href: '/settings', icon: 'settings' as const },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
   const { ghUser, repoCount } = useAuth()
 
@@ -49,6 +49,7 @@ export default function Sidebar() {
         const active = pathname === item.href
         return (
           <Link key={item.href} href={item.href}
+            onClick={onClose}
             className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
             style={{
               color: active ? 'var(--accent)' : 'var(--text-secondary)',
@@ -70,6 +71,7 @@ export default function Sidebar() {
         const active = pathname === item.href
         return (
           <Link key={item.href} href={item.href}
+            onClick={onClose}
             className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
             style={{ color: active ? 'var(--accent)' : 'var(--text-secondary)', background: active ? 'var(--accent-dim)' : 'transparent' }}
             onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--bg2)' }}

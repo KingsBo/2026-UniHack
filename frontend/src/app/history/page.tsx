@@ -56,10 +56,10 @@ export default function HistoryPage() {
   const scansRemaining = Math.max(0, scansLimit - scansUsed)
 
   return (
-    <div className="px-12 py-10">
+    <div className="px-4 md:px-12 py-6 md:py-10">
       <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>
+          <h1 className="text-xl md:text-2xl font-extrabold tracking-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>
             Scan history
           </h1>
           <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -106,8 +106,45 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', background: 'var(--bg1)' }}>
-        <table className="w-full font-mono text-sm">
+      {/* Mobile card layout */}
+      <div className="md:hidden flex flex-col gap-3">
+        {loading
+          ? Array.from({ length: 4 }).map((_, idx) => (
+              <div key={idx} className="rounded-xl p-4 animate-pulse" style={{ background: 'var(--bg1)', border: '1px solid var(--border)' }}>
+                <div className="h-3 w-2/5 rounded mb-3" style={{ background: 'var(--bg2)' }} />
+                <div className="h-3 w-1/4 rounded mb-4" style={{ background: 'var(--bg2)' }} />
+                <div className="h-8 rounded" style={{ background: 'var(--bg2)' }} />
+              </div>
+            ))
+            : filtered.map((entry: ScanHistoryEntry) => {
+                const st = statusStyle(entry.status)
+                return (
+                  <div key={entry.id} className="rounded-xl p-4" style={{ background: 'var(--bg1)', border: '1px solid var(--border)' }}>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="font-mono font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{entry.repoName}</span>
+                      <span className="px-2 py-0.5 rounded font-mono text-xs capitalize flex-shrink-0" style={{ background: st.bg, color: st.color }}>{entry.status}</span>
+                    </div>
+                    <div className="flex items-center gap-3 font-mono text-[11px] mb-3" style={{ color: 'var(--text-muted)' }}>
+                      <span>{entry.branch}</span>
+                      <span>·</span>
+                      <span>{entry.findingCount} findings</span>
+                      {entry.completedAt && <><span>·</span><span>{new Date(entry.completedAt).toLocaleDateString()}</span></>}
+                    </div>
+                    <Link
+                      href={`/result/${entry.id}`}
+                      className="text-xs font-medium"
+                      style={{ color: 'var(--accent)' }}
+                    >
+                      View report →
+                    </Link>
+                  </div>
+                )
+              })}
+      </div>
+
+      {/* Desktop table layout */}
+      <div className="hidden md:block overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border)', background: 'var(--bg1)' }}>
+        <table className="w-full min-w-[640px] font-mono text-sm">
           <thead>
             <tr style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
               <th className="text-left py-3 px-5 font-semibold" style={{ color: 'var(--text-muted)' }}>Repository</th>
@@ -123,20 +160,12 @@ export default function HistoryPage() {
             {loading
               ? Array.from({ length: 6 }).map((_, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                    {Array.from({ length: 6 }).map((__ , cellIdx) => (
+                    {Array.from({ length: 6 }).map((__, cellIdx) => (
                       <td key={cellIdx} className="py-3 px-5">
-                        <div
-                          className="h-3 rounded animate-pulse"
-                          style={{ background: 'var(--bg2)', width: cellIdx === 0 ? '40%' : cellIdx === 5 ? '60%' : '30%' }}
-                        />
+                        <div className="h-3 rounded animate-pulse" style={{ background: 'var(--bg2)', width: cellIdx === 0 ? '40%' : cellIdx === 5 ? '60%' : '30%' }} />
                       </td>
                     ))}
-                    <td className="py-3 px-5">
-                      <div
-                        className="h-3 w-16 rounded animate-pulse"
-                        style={{ background: 'var(--bg2)' }}
-                      />
-                    </td>
+                    <td className="py-3 px-5"><div className="h-3 w-16 rounded animate-pulse" style={{ background: 'var(--bg2)' }} /></td>
                   </tr>
                 ))
               : filtered.map((entry: ScanHistoryEntry) => {
@@ -146,9 +175,7 @@ export default function HistoryPage() {
                       <td className="py-3 px-5 font-medium" style={{ color: 'var(--text-primary)' }}>{entry.repoName}</td>
                       <td className="py-3 px-5" style={{ color: 'var(--text-secondary)' }}>{entry.branch}</td>
                       <td className="py-3 px-5">
-                        <span className="px-2 py-0.5 rounded text-xs capitalize" style={{ background: st.bg, color: st.color }}>
-                          {entry.status}
-                        </span>
+                        <span className="px-2 py-0.5 rounded text-xs capitalize" style={{ background: st.bg, color: st.color }}>{entry.status}</span>
                       </td>
                       <td className="py-3 px-5" style={{ color: 'var(--text-primary)' }}>{entry.findingCount}</td>
                       <td className="py-3 px-5" style={{ color: 'var(--text-secondary)' }}>{formatDuration(entry.durationMs)}</td>
@@ -156,13 +183,7 @@ export default function HistoryPage() {
                         {entry.completedAt ? new Date(entry.completedAt).toLocaleString() : '—'}
                       </td>
                       <td className="py-3 px-5">
-                        <Link
-                          href={`/result/${entry.id}`}
-                          className="text-xs font-medium"
-                          style={{ color: 'var(--accent)' }}
-                        >
-                          View report →
-                        </Link>
+                        <Link href={`/result/${entry.id}`} className="text-xs font-medium" style={{ color: 'var(--accent)' }}>View report →</Link>
                       </td>
                     </tr>
                   )
