@@ -8,7 +8,7 @@ import { supabase, getOrCreateRepo } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/get-user";
 import type { GitleaksFinding, TrivyVulnerability } from "@/types";
 
-const MAX_SCANS_PER_USER = 3;
+const DEFAULT_SCAN_LIMIT = 3;
 
 function mapGitleaksSeverity(): string {
   return "critical";
@@ -70,19 +70,27 @@ export async function POST(request: NextRequest) {
     let dbRepoId: string | null = null;
 
     if (user) {
-      // Check scan rate limit
+      // Check scan rate limit (read limit from user row)
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("scan_limit")
+        .eq("id", user.id)
+        .single();
+
+      const scanLimit = userRow?.scan_limit ?? DEFAULT_SCAN_LIMIT;
+
       const { count, error: countErr } = await supabase
         .from("scans")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id);
 
-      if (!countErr && count !== null && count >= MAX_SCANS_PER_USER) {
+      if (!countErr && count !== null && count >= scanLimit) {
         return NextResponse.json(
           {
-            error: `Scan limit reached. You have used all ${MAX_SCANS_PER_USER} of your available scans.`,
+            error: `Scan limit reached. You have used all ${scanLimit} of your available scans.`,
             errorType: "rate_limit",
             scansUsed: count,
-            scansLimit: MAX_SCANS_PER_USER,
+            scansLimit: scanLimit,
           },
           { status: 429 },
         );
@@ -115,6 +123,17 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (scanErr) {
+        // DB trigger enforces scan limit — surface it as 429
+        if (scanErr.message?.includes("Scan limit reached")) {
+          return NextResponse.json(
+            {
+              error: `Scan limit reached. You have used all your available scans.`,
+              errorType: "rate_limit",
+              scansLimit: scanLimit,
+            },
+            { status: 429 },
+          );
+        }
         console.error("Failed to create scan:", scanErr.message);
       } else {
         scanId = scanRow.id;

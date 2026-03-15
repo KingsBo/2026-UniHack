@@ -188,5 +188,6 @@ export async function GET(
     durationMs: scan.duration_ms,
     fileCount: 0,
     findings,
+    aiSummary: scan.ai_summary || null,
   });
 }
