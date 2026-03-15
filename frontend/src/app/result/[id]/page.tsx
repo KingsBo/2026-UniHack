@@ -133,7 +133,6 @@ export default function ResultPage() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
-  // --- AI Summary State ---
   const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'done'>('idle')
   const [aiSummary, setAiSummary] = useState('')
 
