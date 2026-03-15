@@ -19,7 +19,6 @@ export function getGoogleAuth(): GoogleAuth | null {
         token_url: "https://sts.googleapis.com/v1/token",
         service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${process.env.GCP_SERVICE_ACCOUNT_EMAIL}:generateAccessToken`,
         subject_token_supplier: {
-          // This tells the SDK to use the Vercel-provided token directly
           getSubjectToken: async () => process.env.VERCEL_OIDC_TOKEN!,
         },
       } as any, 
