@@ -31,7 +31,7 @@ export default function ScanSummaryBar({ scan, activeSev = 'all', onSevChange }:
       {/* Title row */}
       <div className="flex items-start justify-between gap-6 flex-wrap mb-6">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>
+          <h1 className="text-xl md:text-3xl font-extrabold tracking-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>
             {scan.repoName}
           </h1>
           <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>

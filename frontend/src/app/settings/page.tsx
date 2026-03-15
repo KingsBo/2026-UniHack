@@ -24,9 +24,9 @@ export default function SettingsPage() {
   const loading = authLoading || detailLoading
 
   return (
-    <div className="px-12 py-10">
+    <div className="px-4 md:px-12 py-6 md:py-10">
       <div className="mb-9">
-        <h1 className="text-2xl font-extrabold tracking-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>
+        <h1 className="text-xl md:text-2xl font-extrabold tracking-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>
           Preferences
         </h1>
         <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>

@@ -212,6 +212,8 @@ function buildAiSummary(scan: ScanResult) {
   return sections
 }
 
+import DashboardShell from '@/components/layout/DashboardShell'
+
 export default function ResultPage() {
   const params = useParams()
   const scanId = params.id as string
@@ -219,6 +221,7 @@ export default function ResultPage() {
   const [activeTool, setActiveTool] = useState<'all' | ScanTool>('all')
   const [activeSev, setActiveSev] = useState<Severity | 'all'>('all')
   const [showAiSummary, setShowAiSummary] = useState(false)
+  const [aiExpandedMobile, setAiExpandedMobile] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -237,9 +240,8 @@ export default function ResultPage() {
 
   if (loadError) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg0)' }}>
-        <Header variant="app" />
-        <div className="flex-1 flex items-center justify-center">
+      <DashboardShell>
+        <div className="flex-1 flex items-center justify-center p-12">
           <div className="text-center">
             <p className="font-mono text-sm mb-4" style={{ color: 'var(--text-muted)' }}>{loadError}</p>
             <div className="flex items-center justify-center gap-4">
@@ -252,18 +254,17 @@ export default function ResultPage() {
             </div>
           </div>
         </div>
-      </div>
+      </DashboardShell>
     )
   }
 
   if (!scan) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg0)' }}>
-        <Header variant="app" />
-        <div className="flex-1 flex items-center justify-center">
+      <DashboardShell>
+        <div className="flex-1 flex items-center justify-center p-12">
           <p className="font-mono text-sm" style={{ color: 'var(--text-muted)' }}>Loading...</p>
         </div>
-      </div>
+      </DashboardShell>
     )
   }
 
@@ -272,10 +273,8 @@ export default function ResultPage() {
     .filter((f) => activeSev === 'all' || f.severity === activeSev)
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg0)' }}>
-      <Header variant="app" />
-
-      <div className="px-8 py-10 max-w-[1400px] mx-auto w-full">
+    <DashboardShell>
+      <div className="px-4 md:px-8 py-6 md:py-10 max-w-[1400px] mx-auto w-full">
         {/* Back */}
         <Link
           href="/dashboard"
@@ -341,17 +340,85 @@ export default function ResultPage() {
           </button>
         </div>
 
-        {/* Main content: side-by-side when AI summary is open */}
-        <div className={`flex gap-8 ${showAiSummary ? 'items-start' : ''}`}>
+        {/* ── Mobile: AI card at top ── */}
+        {showAiSummary && (
+          <div className="md:hidden mb-4 rounded-xl overflow-hidden cursor-pointer" 
+               style={{ background: 'var(--bg1)', border: '1px solid var(--border)' }}
+               onClick={() => setAiExpandedMobile(v => !v)}>
+            <div className="flex items-center gap-3 px-4 pt-6 pb-4">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                </svg>
+              </span>
+              <div>
+                <h3 className="font-bold tracking-tight text-sm" style={{ color: 'var(--text-primary)' }}>AI Security Analysis</h3>
+                <p className="font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                  Automated summary
+                </p>
+              </div>
+            </div>
+            
+            <div className={`px-4 overflow-hidden transition-all duration-300 ${aiExpandedMobile ? 'pb-4 max-h-[1000px] overflow-y-auto' : 'max-h-[3.5rem]'}`}>
+              {aiExpandedMobile
+                ? aiSections.map((section, idx) => (
+                    <div key={idx} className="mb-6 selection:bg-accent/20">
+                      <h4 className="text-sm font-semibold tracking-tight mb-2" style={{ color: 'var(--text-primary)' }}>{section.heading}</h4>
+                      <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'var(--text-secondary)' }}>
+                        {section.body.split(/(\*\*.*?\*\*)/g).map((part, i) => {
+                          if (part.startsWith('**') && part.endsWith('**')) {
+                            return <strong key={i} style={{ color: 'var(--text-primary)' }}>{part.slice(2, -2)}</strong>
+                          }
+                          return part.split(/(`.*?`)/g).map((sub, j) => {
+                            if (sub.startsWith('`') && sub.endsWith('`')) {
+                              return (
+                                <code key={`${i}-${j}`} className="font-mono text-[11px] px-1 py-0.5 rounded"
+                                  style={{ background: 'var(--bg2)', color: 'var(--text-primary)' }}>
+                                  {sub.slice(1, -1)}
+                                </code>
+                              )
+                            }
+                            return sub
+                          })
+                        })}
+                      </div>
+                    </div>
+                  ))
+                : <p className="text-sm leading-relaxed line-clamp-2" style={{ color: 'var(--text-secondary)' }}>
+                    {aiSections[0]?.body.replace(/\*\*/g, '')}
+                  </p>
+              }
+            </div>
+
+            <div className="flex justify-center py-3" style={{ borderTop: aiExpandedMobile ? '1px solid var(--border)' : 'none' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                style={{ transform: aiExpandedMobile ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: 'var(--text-muted)' }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+          </div>
+        )}
+
+        {/* ── Main content ── */}
+        {/* Mobile: findings full-width below the AI card */}
+        <div className="md:hidden flex flex-col gap-3">
+          {filtered.map((finding) => (
+            <FindingCard key={finding.id} finding={finding} />
+          ))}
+          {filtered.length === 0 && (
+            <div className="py-16 text-center font-mono text-sm" style={{ color: 'var(--text-muted)' }}>No findings for this tool.</div>
+          )}
+        </div>
+
+        {/* Desktop: side-by-side when AI summary is open */}
+        <div className={`hidden md:flex gap-8 ${showAiSummary ? 'items-start' : ''}`}>
           {/* Findings column */}
           <div className={`flex flex-col gap-3 transition-all duration-300 ${showAiSummary ? 'w-1/2 min-w-0' : 'w-full'}`}>
             {filtered.map((finding) => (
               <FindingCard key={finding.id} finding={finding} />
             ))}
             {filtered.length === 0 && (
-              <div className="py-16 text-center font-mono text-sm" style={{ color: 'var(--text-muted)' }}>
-                No findings for this tool.
-              </div>
+              <div className="py-16 text-center font-mono text-sm" style={{ color: 'var(--text-muted)' }}>No findings for this tool.</div>
             )}
           </div>
 
@@ -468,6 +535,6 @@ export default function ResultPage() {
           )}
         </div>
       </div>
-    </div>
+    </DashboardShell>
   )
 }
