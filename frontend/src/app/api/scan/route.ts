@@ -67,77 +67,80 @@ export async function POST(request: NextRequest) {
     // Get authenticated user from DB
     const user = await getAuthenticatedUser();
     let scanId: string | null = null;
-    let dbRepoId: string | null = null;
 
-    if (user) {
-      // Check scan rate limit (read limit from user row)
-      const { data: userRow } = await supabase
-        .from("users")
-        .select("scan_limit")
-        .eq("id", user.id)
-        .single();
-      const scanLimit = userRow?.scan_limit ?? DEFAULT_SCAN_LIMIT;
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unable to load your user profile. Please sign out and reconnect GitHub." },
+        { status: 401 },
+      );
+    }
 
-      const { count, error: countErr } = await supabase
-        .from("scans")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
+    // Check scan rate limit (read limit from user row)
+    const { data: userRow } = await supabase
+      .from("users")
+      .select("scan_limit")
+      .eq("id", user.id)
+      .single();
+    const scanLimit = userRow?.scan_limit ?? DEFAULT_SCAN_LIMIT;
 
-      if (!countErr && count !== null && count >= scanLimit) {
+    const { count, error: countErr } = await supabase
+      .from("scans")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    if (!countErr && count !== null && count >= scanLimit) {
+      return NextResponse.json(
+        {
+          error: `Scan limit reached. You have used all ${scanLimit} of your available scans.`,
+          errorType: "rate_limit",
+          scansUsed: count,
+          scansLimit: scanLimit,
+        },
+        { status: 429 },
+      );
+    }
+
+    // Upsert repository
+    const dbRepo = await getOrCreateRepo(user.id, {
+      github_repo_id: repoId || 0,
+      name: repo,
+      full_name: repoFullName || `${owner}/${repo}`,
+      url: repoUrl,
+      default_branch: defaultBranch || "main",
+      is_private: isPrivate || false,
+      language: language || null,
+    });
+
+    // Create scan record
+    const { data: scanRow, error: scanErr } = await supabase
+      .from("scans")
+      .insert({
+        repository_id: dbRepo.id,
+        user_id: user.id,
+        status: "running",
+        tools_run: ["gitleaks", "trivy"],
+        branch: defaultBranch || "main",
+        started_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (scanErr) {
+      // DB trigger enforces scan limit — surface it as 429
+      if (scanErr.message?.includes("Scan limit reached")) {
         return NextResponse.json(
           {
-            error: `Scan limit reached. You have used all ${scanLimit} of your available scans.`,
+            error: `Scan limit reached. You have used all your available scans.`,
             errorType: "rate_limit",
-            scansUsed: count,
             scansLimit: scanLimit,
           },
           { status: 429 },
         );
       }
-
-      // Upsert repository
-      const dbRepo = await getOrCreateRepo(user.id, {
-        github_repo_id: repoId || 0,
-        name: repo,
-        full_name: repoFullName || `${owner}/${repo}`,
-        url: repoUrl,
-        default_branch: defaultBranch || "main",
-        is_private: isPrivate || false,
-        language: language || null,
-      });
-      dbRepoId = dbRepo.id;
-
-      // Create scan record
-      const { data: scanRow, error: scanErr } = await supabase
-        .from("scans")
-        .insert({
-          repository_id: dbRepo.id,
-          user_id: user.id,
-          status: "running",
-          tools_run: ["gitleaks", "trivy"],
-          branch: defaultBranch || "main",
-          started_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (scanErr) {
-        // DB trigger enforces scan limit — surface it as 429
-        if (scanErr.message?.includes("Scan limit reached")) {
-          return NextResponse.json(
-            {
-              error: `Scan limit reached. You have used all your available scans.`,
-              errorType: "rate_limit",
-              scansLimit: scanLimit,
-            },
-            { status: 429 },
-          );
-        }
-        console.error("Failed to create scan:", scanErr.message);
-      } else {
-        scanId = scanRow.id;
-      }
+      console.error("Failed to create scan:", scanErr.message);
+      return NextResponse.json({ error: "Failed to create scan record" }, { status: 500 });
     }
+    scanId = scanRow.id;
 
     const startTime = Date.now();
     const payload = { repoUrl, token };
@@ -163,7 +166,7 @@ export async function POST(request: NextRequest) {
             severity: mapGitleaksSeverity(),
             title: f.Description || f.RuleID,
             description: `Secret detected: ${f.RuleID}. Found in commit ${f.Commit?.slice(0, 7) || "unknown"} by ${f.Author || "unknown"}.`,
-            file_path: f.File,
+            file_path: f.File || "unknown",
             line_number: f.StartLine,
             rule_id: f.RuleID,
             snippet: f.Match || f.Secret,
@@ -182,7 +185,7 @@ export async function POST(request: NextRequest) {
             severity: mapTrivySeverity(v.Severity),
             title: v.Title || v.VulnerabilityID,
             description: summariseTrivyDescription(v),
-            file_path: v.PkgPath || v.PkgName,
+            file_path: v.PkgPath || v.PkgName || "unknown",
             line_number: 0,
             rule_id: v.VulnerabilityID,
             pkg_name: v.PkgName,
@@ -195,12 +198,16 @@ export async function POST(request: NextRequest) {
       }
 
       if (resultRows.length > 0) {
-        await supabase.from("scan_results").insert(resultRows);
+        const { error: resultsErr } = await supabase.from("scan_results").insert(resultRows);
+        if (resultsErr) {
+          console.error("Failed to save scan results:", resultsErr.message);
+          return NextResponse.json({ error: "Failed to save scan results" }, { status: 500 });
+        }
       }
 
       const hasError = gitleaksResult.status === "rejected" && trivyResult.status === "rejected";
 
-      await supabase
+      const { error: updateErr } = await supabase
         .from("scans")
         .update({
           status: hasError ? "failed" : "completed",
@@ -210,6 +217,11 @@ export async function POST(request: NextRequest) {
           error_message: hasError ? "All scanners failed" : null,
         })
         .eq("id", scanId);
+
+      if (updateErr) {
+        console.error("Failed to update scan:", updateErr.message);
+        return NextResponse.json({ error: "Failed to update scan record" }, { status: 500 });
+      }
     }
 
     return NextResponse.json({
