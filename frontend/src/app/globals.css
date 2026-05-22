@@ -159,3 +159,25 @@ body::before {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .animate-scale-in { animation: scale-in 0.25s ease forwards; }
+
+@keyframes typewriter {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+@keyframes cursor-blink {
+  0%, 100% { border-color: var(--accent); }
+  50%      { border-color: transparent; }
+}
+.typewriter-wrap {
+  display: inline-block;
+  position: relative;
+}
+.typewriter-text {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid var(--accent);
+  animation:
+    typewriter 1.8s steps(20, end) forwards,
+    cursor-blink 0.75s step-end infinite;
+}

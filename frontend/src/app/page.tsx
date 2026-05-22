@@ -10,9 +10,9 @@ export default function LandingPage() {
         <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full blur-[100px] opacity-70"
              style={{ background: 'radial-gradient(circle, var(--accent-dim) 0%, transparent 70%)' }} />
         
-        {/* Bottom-right green glow */}
+        {/* Bottom-right accent glow */}
         <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px] opacity-70"
-             style={{ background: 'radial-gradient(circle, var(--green-dim) 0%, transparent 70%)' }} />
+             style={{ background: 'radial-gradient(circle, var(--accent-dim) 0%, transparent 70%)' }} />
         
         {/* Subtle full-page grid */}
         <div className="absolute inset-0 opacity-70"

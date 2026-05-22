@@ -35,12 +35,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 });
   }
 
-  const history = (data || [])
+  const allScans = (data || [])
     .map((scan: Record<string, unknown>) => {
       const repo = scan.repository as Record<string, unknown> | null;
       return {
         id: scan.id,
-        repoId: repo?.id || "",
+        repoId: (repo?.id as string) || "",
         repoName: (repo?.full_name as string) || (repo?.name as string) || "unknown",
         branch: scan.branch || "main",
         status: scan.status === "completed" ? "complete" : scan.status,
@@ -54,10 +54,27 @@ export async function GET(request: NextRequest) {
       q ? (entry.repoName as string).toLowerCase().includes(q) : true,
     );
 
+  // Group scans by repository, keeping only the last 3 per repo
+  const repoMap = new Map<string, { repoId: string; repoName: string; scans: typeof allScans }>();
+
+  for (const scan of allScans) {
+    const key = scan.repoId || scan.repoName;
+    if (!repoMap.has(key)) {
+      repoMap.set(key, { repoId: scan.repoId, repoName: scan.repoName, scans: [] });
+    }
+    const group = repoMap.get(key)!;
+    if (group.scans.length < 3) {
+      group.scans.push(scan);
+    }
+  }
+
+  const repos = Array.from(repoMap.values());
+
   return NextResponse.json({
-    history,
-    scansUsed: history.length,
+    repos,
+    history: allScans, // Keep backward compatibility
+    scansUsed: allScans.length,
     scansLimit: scanLimit,
-    scansRemaining: Math.max(0, scanLimit - history.length),
+    scansRemaining: Math.max(0, scanLimit - allScans.length),
   });
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Header from '@/components/layout/Header'
 import Sidebar from '@/components/layout/Sidebar'
+import { ScanProvider } from '@/context/ScanContext'
 
 export default function DashboardShell({ children, withSidebar = true }: { children: React.ReactNode, withSidebar?: boolean }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -38,8 +39,8 @@ export default function DashboardShell({ children, withSidebar = true }: { child
           </div>
         )}
         <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
+            <ScanProvider>{children}</ScanProvider>
+          </main>
       </div>
     </div>
   )

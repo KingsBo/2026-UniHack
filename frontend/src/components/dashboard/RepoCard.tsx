@@ -6,9 +6,10 @@ import type { Repo } from '@/types'
 type RepoCardProps = {
   repo: Repo
   onScan: (repo: Repo) => void
+  disabled?: boolean
 }
 
-export default function RepoCard({ repo, onScan }: RepoCardProps) {
+export default function RepoCard({ repo, onScan, disabled }: RepoCardProps) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -65,6 +66,11 @@ export default function RepoCard({ repo, onScan }: RepoCardProps) {
             style={{ background: 'var(--green-dim)', border: '1px solid rgba(45,217,143,0.2)', color: 'var(--green)' }}>
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--green)' }} />
             Last scanned {repo.lastScan.completedAt} · {repo.lastScan.findingCount} findings
+          </div>
+        ) : disabled ? (
+          <div className="w-full py-2.5 text-[11px] font-semibold tracking-widest uppercase rounded-lg text-center font-mono"
+            style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-muted)', opacity: 0.6, cursor: 'not-allowed' }}>
+            Scan in progress...
           </div>
         ) : (
           <button

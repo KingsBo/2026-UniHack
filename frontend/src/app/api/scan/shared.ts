@@ -27,10 +27,10 @@ export function getGoogleAuth(): GoogleAuth | null {
     return googleAuth;
   }
 
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    googleAuth = new GoogleAuth();
-    return googleAuth;
-  }
+  // if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+  //   googleAuth = new GoogleAuth();
+  //   return googleAuth;
+  // }
 
   return null;
 }
@@ -40,7 +40,6 @@ export async function getAuthHeaders(
 ): Promise<Record<string, string>> {
   const auth = getGoogleAuth();
   
-  // Security check: Only attempt to send Identity tokens to actual Cloud Run URLs
   if (!auth || !serviceUrl.includes(".run.app")) {
     return {};
   }
