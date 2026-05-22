@@ -27,10 +27,10 @@ export function getGoogleAuth(): GoogleAuth | null {
     return googleAuth;
   }
 
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    googleAuth = new GoogleAuth();
-    return googleAuth;
-  }
+  // if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+  //   googleAuth = new GoogleAuth();
+  //   return googleAuth;
+  // }
 
   return null;
 }
@@ -45,15 +45,51 @@ export async function getAuthHeaders(
   }
 
   try {
-    const client = await auth.getIdTokenClient(serviceUrl);
-    const rawHeaders = await client.getRequestHeaders(serviceUrl);
-    
-    const authorization =
-      rawHeaders instanceof Headers
-        ? rawHeaders.get("Authorization")
-        : (rawHeaders as Record<string, string>).Authorization;
-        
-    return authorization ? { Authorization: authorization } : {};
+    // Check if we are using Vercel OIDC vs Local Development
+    const isVercelOIDC = process.env.GCP_PROJECT_NUMBER && !process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+    if (isVercelOIDC) {
+      const client = await auth.getClient();
+      const accessTokenRes = await client.getAccessToken();
+      
+      if (!accessTokenRes.token) {
+        throw new Error("Failed to retrieve base access token from Google");
+      }
+
+      const idTokenRes = await fetch(
+        `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${process.env.GCP_SERVICE_ACCOUNT_EMAIL}:generateIdToken`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessTokenRes.token}`,
+          },
+          body: JSON.stringify({
+            audience: serviceUrl,
+            includeEmail: true,
+          }),
+        }
+      );
+
+      if (!idTokenRes.ok) {
+        const errorText = await idTokenRes.text();
+        throw new Error(`IAM generateIdToken Error: ${errorText}`);
+      }
+
+      const idTokenData = await idTokenRes.json();
+      return { Authorization: `Bearer ${idTokenData.token}` };
+
+    } else {
+      const client = await auth.getIdTokenClient(serviceUrl);
+      const rawHeaders = await client.getRequestHeaders(serviceUrl);
+      
+      const authorization =
+        rawHeaders instanceof Headers
+          ? rawHeaders.get("Authorization")
+          : (rawHeaders as Record<string, string>).Authorization;
+          
+      return authorization ? { Authorization: authorization } : {};
+    }
   } catch (error) {
     console.error(`Failed to generate Auth Headers for ${serviceUrl}:`, error);
     return {};

@@ -78,6 +78,12 @@ export interface ScanHistoryEntry {
   findingCount: number
 }
 
+export interface RepoHistoryGroup {
+  repoId: string
+  repoName: string
+  scans: ScanHistoryEntry[]
+}
+
 // --- Scanner backend types ---
 
 export interface GitleaksFinding {

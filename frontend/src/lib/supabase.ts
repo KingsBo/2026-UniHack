@@ -1,14 +1,20 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const supabaseUrl =
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY || ''
 
 let _supabase: SupabaseClient | null = null
 
 export function getSupabase(): SupabaseClient | null {
-  if (!supabaseUrl || !supabaseServiceKey) return null
+  if (!supabaseUrl || !supabaseSecretKey) return null
   if (!_supabase) {
-    _supabase = createClient(supabaseUrl, supabaseServiceKey)
+    _supabase = createClient(supabaseUrl, supabaseSecretKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
   }
   return _supabase
 }

@@ -1,16 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import RepoCard from '@/components/dashboard/RepoCard'
-import ScanModal from '@/components/dashboard/ScanModal'
 import { useGitHubRepos } from '@/hooks/useGitHubRepos'
+import { useScan } from '@/context/ScanContext'
+import { useState } from 'react'
 import type { Repo } from '@/types'
 
 const isTestMode = process.env.NEXT_PUBLIC_TEST_MODE === 'true'
 
 export default function DashboardPage() {
   const { repos, loading, error, needsGitHub } = useGitHubRepos()
-  const [scanningRepo, setScanningRepo] = useState<Repo | null>(null)
+  const { isScanning, scanningRepo } = useScan()
+  const router = useRouter()
   const [filter, setFilter] = useState('')
   const [visFilter, setVisFilter] = useState<'all' | 'public' | 'private'>('all')
   const [resetting, setResetting] = useState(false)
@@ -20,6 +22,19 @@ export default function DashboardPage() {
     const matchVis = visFilter === 'all' || r.visibility === visFilter
     return matchName && matchVis
   })
+
+  const handleScan = (repo: Repo) => {
+    const params = new URLSearchParams({
+      repo: repo.name,
+      owner: repo.owner,
+      branch: repo.defaultBranch,
+      language: repo.language,
+      visibility: repo.visibility,
+      repoId: String(repo.githubId),
+      fullName: repo.full_name,
+    })
+    router.push(`/dashboard/scan?${params.toString()}`)
+  }
 
   if (needsGitHub) {
     return (
@@ -50,18 +65,27 @@ export default function DashboardPage() {
   }
 
   return (
-    <>
-      <div className="px-4 md:px-12 py-6 md:py-10">
-        {/* Header */}
-        <div className="mb-[24px] flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-xl md:text-2xl font-extrabold tracking-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>
-              Your repositories
-            </h1>
-            <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
-              // select a repo to run a security scan
-            </p>
-          </div>
+    <div className="px-4 md:px-12 py-6 md:py-10">
+      {/* Header */}
+      <div className="mb-[24px] flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-xl md:text-2xl font-extrabold tracking-tight mb-1.5 typewriter-wrap" style={{ color: 'var(--text-primary)' }}>
+            <span className="typewriter-text">Your repositories</span>
+          </h1>
+          <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
+            // select a repo to run a security scan
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {isScanning && (
+            <div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg font-mono text-xs"
+              style={{ background: 'var(--accent-dim)', border: '1px solid rgba(123,110,246,0.25)', color: 'var(--accent)' }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full animate-blink" style={{ background: 'var(--accent)' }} />
+              Scanning {scanningRepo}...
+            </div>
+          )}
           {isTestMode && (
             <button
               onClick={async () => {
@@ -83,117 +107,116 @@ export default function DashboardPage() {
             </button>
           )}
         </div>
-
-        {/* Toolbar */}
-        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-          <div
-            className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg font-mono text-xs w-60 transition-all"
-            style={{ background: 'var(--bg2)', border: '1px solid var(--border)' }}
-          >
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <circle cx="7" cy="7" r="5" stroke="var(--text-muted)" strokeWidth="1.5" />
-              <path d="M11 11l3 3" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            <input
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder="Filter repositories..."
-              className="bg-transparent border-none outline-none text-xs font-mono w-full placeholder:text-[#6B6B7B]"
-              style={{ color: 'var(--text-primary)' }}
-            />
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            {(['all', 'public', 'private'] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setVisFilter(v)}
-                className="px-4 py-2 text-[11px] font-medium tracking-widest uppercase rounded-lg transition-all capitalize"
-                style={
-                  visFilter === v
-                    ? { background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid rgba(123,110,246,0.25)' }
-                    : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }
-                }
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {loading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, idx) => (
-              <div
-                key={idx}
-                className="relative flex flex-col overflow-hidden rounded-xl p-5 animate-pulse"
-                style={{
-                  background: 'var(--bg1)',
-                  border: '1px solid var(--border)',
-                }}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div
-                    className="w-8 h-8 rounded-lg"
-                    style={{ background: 'var(--bg2)' }}
-                  />
-                  <div
-                    className="h-5 w-12 rounded-full"
-                    style={{ background: 'var(--bg2)' }}
-                  />
-                </div>
-                <div
-                  className="h-4 w-32 rounded mb-2"
-                  style={{ background: 'var(--bg2)' }}
-                />
-                <div
-                  className="h-3 w-40 rounded mb-6"
-                  style={{ background: 'var(--bg2)' }}
-                />
-                <div className="flex items-center gap-4 mb-4">
-                  <div
-                    className="h-3 w-24 rounded"
-                    style={{ background: 'var(--bg2)' }}
-                  />
-                  <div
-                    className="h-3 w-20 rounded"
-                    style={{ background: 'var(--bg2)' }}
-                  />
-                </div>
-                <div
-                  className="mt-auto h-8 w-full rounded-lg"
-                  style={{ background: 'var(--bg2)' }}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!loading && error && (
-          <div className="py-20 text-center font-mono text-sm" style={{ color: '#ef4444' }}>
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filtered.map((repo) => (
-              <RepoCard
-                key={repo.id}
-                repo={repo}
-                onScan={(r) => setScanningRepo(r)}
-              />
-            ))}
-            {filtered.length === 0 && (
-              <div className="col-span-3 py-20 text-center font-mono text-sm" style={{ color: 'var(--text-muted)' }}>
-                No repositories match your filter.
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
-      <ScanModal repo={scanningRepo} onClose={() => setScanningRepo(null)} />
-    </>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+        <div
+          className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg font-mono text-xs w-60 transition-all"
+          style={{ background: 'var(--bg2)', border: '1px solid var(--border)' }}
+        >
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <circle cx="7" cy="7" r="5" stroke="var(--text-muted)" strokeWidth="1.5" />
+            <path d="M11 11l3 3" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter repositories..."
+            className="bg-transparent border-none outline-none text-xs font-mono w-full placeholder:text-[#6B6B7B]"
+            style={{ color: 'var(--text-primary)' }}
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {(['all', 'public', 'private'] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setVisFilter(v)}
+              className="px-4 py-2 text-[11px] font-medium tracking-widest uppercase rounded-lg transition-all capitalize"
+              style={
+                visFilter === v
+                  ? { background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid rgba(123,110,246,0.25)' }
+                  : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }
+              }
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading && !error && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="relative flex flex-col overflow-hidden rounded-xl p-5 animate-pulse"
+              style={{
+                background: 'var(--bg1)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div
+                  className="w-8 h-8 rounded-lg"
+                  style={{ background: 'var(--bg2)' }}
+                />
+                <div
+                  className="h-5 w-12 rounded-full"
+                  style={{ background: 'var(--bg2)' }}
+                />
+              </div>
+              <div
+                className="h-4 w-32 rounded mb-2"
+                style={{ background: 'var(--bg2)' }}
+              />
+              <div
+                className="h-3 w-40 rounded mb-6"
+                style={{ background: 'var(--bg2)' }}
+              />
+              <div className="flex items-center gap-4 mb-4">
+                <div
+                  className="h-3 w-24 rounded"
+                  style={{ background: 'var(--bg2)' }}
+                />
+                <div
+                  className="h-3 w-20 rounded"
+                  style={{ background: 'var(--bg2)' }}
+                />
+              </div>
+              <div
+                className="mt-auto h-8 w-full rounded-lg"
+                style={{ background: 'var(--bg2)' }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="py-20 text-center font-mono text-sm" style={{ color: '#ef4444' }}>
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filtered.map((repo) => (
+            <RepoCard
+              key={repo.id}
+              repo={repo}
+              onScan={handleScan}
+              disabled={isScanning}
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-3 py-20 text-center font-mono text-sm" style={{ color: 'var(--text-muted)' }}>
+              No repositories match your filter.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }

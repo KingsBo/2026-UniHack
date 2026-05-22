@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import type { ScanHistoryEntry, ScanStatus } from '@/types'
+import type { ScanHistoryEntry, ScanStatus, RepoHistoryGroup } from '@/types'
 
 function formatDuration(ms?: number) {
   if (!ms) return '—'
@@ -14,46 +14,73 @@ function formatDuration(ms?: number) {
 function statusStyle(status: ScanStatus) {
   switch (status) {
     case 'complete':
-      return { color: 'var(--green)', bg: 'var(--green-dim)' }
+      return { color: 'var(--green)', bg: 'var(--green-dim)', borderColor: 'rgba(45,217,143,0.2)' }
     case 'failed':
-      return { color: 'var(--red)', bg: 'var(--red-dim)' }
+      return { color: 'var(--red)', bg: 'var(--red-dim)', borderColor: 'rgba(242,92,92,0.2)' }
     case 'running':
-      return { color: 'var(--accent)', bg: 'var(--accent-dim)' }
+      return { color: 'var(--accent)', bg: 'var(--accent-dim)', borderColor: 'rgba(123,110,246,0.25)' }
     default:
-      return { color: 'var(--text-muted)', bg: 'var(--bg2)' }
+      return { color: 'var(--text-muted)', bg: 'var(--bg2)', borderColor: 'var(--border)' }
   }
+}
+
+function formatDate(iso?: string) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 export default function HistoryPage() {
   const [filter, setFilter] = useState('')
   const [loading, setLoading] = useState(true)
-  const [entries, setEntries] = useState<ScanHistoryEntry[]>([])
+  const [repoGroups, setRepoGroups] = useState<RepoHistoryGroup[]>([])
   const [scansUsed, setScansUsed] = useState(0)
   const [scansLimit, setScansLimit] = useState(3)
+  const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetch('/api/history')
       .then((res) => res.json())
       .then((data) => {
-        if (data.history && Array.isArray(data.history)) {
-          setEntries(data.history)
+        if (data.repos && Array.isArray(data.repos)) {
+          setRepoGroups(data.repos)
+          setScansUsed(data.scansUsed ?? 0)
+          setScansLimit(data.scansLimit ?? 3)
+        } else if (data.history && Array.isArray(data.history)) {
+          // Fallback: group manually
+          const map = new Map<string, RepoHistoryGroup>()
+          for (const scan of data.history as ScanHistoryEntry[]) {
+            const key = scan.repoId || scan.repoName
+            if (!map.has(key)) {
+              map.set(key, { repoId: scan.repoId, repoName: scan.repoName, scans: [] })
+            }
+            const group = map.get(key)!
+            if (group.scans.length < 3) {
+              group.scans.push(scan)
+            }
+          }
+          setRepoGroups(Array.from(map.values()))
           setScansUsed(data.scansUsed ?? data.history.length)
           setScansLimit(data.scansLimit ?? 3)
-        } else if (Array.isArray(data)) {
-          // Fallback for old response format
-          setEntries(data)
-          setScansUsed(data.length)
         }
       })
       .catch((err) => console.error('Failed to load history:', err))
       .finally(() => setLoading(false))
   }, [])
 
-  const filtered = entries.filter((e) =>
-    e.repoName.toLowerCase().includes(filter.toLowerCase())
+  const filtered = repoGroups.filter((g) =>
+    g.repoName.toLowerCase().includes(filter.toLowerCase())
   )
 
   const scansRemaining = Math.max(0, scansLimit - scansUsed)
+
+  const toggleRepo = (repoId: string) => {
+    setExpandedRepos((prev) => {
+      const next = new Set(prev)
+      if (next.has(repoId)) next.delete(repoId)
+      else next.add(repoId)
+      return next
+    })
+  }
 
   return (
     <div className="px-4 md:px-12 py-6 md:py-10">
@@ -63,7 +90,7 @@ export default function HistoryPage() {
             Scan history
           </h1>
           <p className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
-            // past security scans across your repositories
+            // past security scans grouped by repository
           </p>
         </div>
         {!loading && (
@@ -106,95 +133,153 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {/* Mobile card layout */}
-      <div className="md:hidden flex flex-col gap-3">
-        {loading
-          ? Array.from({ length: 4 }).map((_, idx) => (
-              <div key={idx} className="rounded-xl p-4 animate-pulse" style={{ background: 'var(--bg1)', border: '1px solid var(--border)' }}>
-                <div className="h-3 w-2/5 rounded mb-3" style={{ background: 'var(--bg2)' }} />
-                <div className="h-3 w-1/4 rounded mb-4" style={{ background: 'var(--bg2)' }} />
-                <div className="h-8 rounded" style={{ background: 'var(--bg2)' }} />
+      {/* Loading state */}
+      {loading && (
+        <div className="flex flex-col gap-4">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <div key={idx} className="rounded-xl p-5 animate-pulse" style={{ background: 'var(--bg1)', border: '1px solid var(--border)' }}>
+              <div className="h-4 w-1/3 rounded mb-3" style={{ background: 'var(--bg2)' }} />
+              <div className="h-3 w-1/5 rounded mb-4" style={{ background: 'var(--bg2)' }} />
+              <div className="space-y-2">
+                {Array.from({ length: 2 }).map((__, sIdx) => (
+                  <div key={sIdx} className="h-10 rounded-lg" style={{ background: 'var(--bg2)' }} />
+                ))}
               </div>
-            ))
-            : filtered.map((entry: ScanHistoryEntry) => {
-                const st = statusStyle(entry.status)
-                return (
-                  <div key={entry.id} className="rounded-xl p-4" style={{ background: 'var(--bg1)', border: '1px solid var(--border)' }}>
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="font-mono font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{entry.repoName}</span>
-                      <span className="px-2 py-0.5 rounded font-mono text-xs capitalize flex-shrink-0" style={{ background: st.bg, color: st.color }}>{entry.status}</span>
-                    </div>
-                    <div className="flex items-center gap-3 font-mono text-[11px] mb-3" style={{ color: 'var(--text-muted)' }}>
-                      <span>{entry.branch}</span>
-                      <span>·</span>
-                      <span>{entry.findingCount} findings</span>
-                      {entry.completedAt && <><span>·</span><span>{new Date(entry.completedAt).toLocaleDateString()}</span></>}
-                    </div>
-                    <Link
-                      href={`/result/${entry.id}`}
-                      className="text-xs font-medium"
-                      style={{ color: 'var(--accent)' }}
-                    >
-                      View report →
-                    </Link>
-                  </div>
-                )
-              })}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      {/* Desktop table layout */}
-      <div className="hidden md:block overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border)', background: 'var(--bg1)' }}>
-        <table className="w-full min-w-[640px] font-mono text-sm">
-          <thead>
-            <tr style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
-              <th className="text-left py-3 px-5 font-semibold" style={{ color: 'var(--text-muted)' }}>Repository</th>
-              <th className="text-left py-3 px-5 font-semibold" style={{ color: 'var(--text-muted)' }}>Branch</th>
-              <th className="text-left py-3 px-5 font-semibold" style={{ color: 'var(--text-muted)' }}>Status</th>
-              <th className="text-left py-3 px-5 font-semibold" style={{ color: 'var(--text-muted)' }}>Findings</th>
-              <th className="text-left py-3 px-5 font-semibold" style={{ color: 'var(--text-muted)' }}>Duration</th>
-              <th className="text-left py-3 px-5 font-semibold" style={{ color: 'var(--text-muted)' }}>Completed</th>
-              <th className="w-24" />
-            </tr>
-          </thead>
-          <tbody>
-            {loading
-              ? Array.from({ length: 6 }).map((_, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                    {Array.from({ length: 6 }).map((__, cellIdx) => (
-                      <td key={cellIdx} className="py-3 px-5">
-                        <div className="h-3 rounded animate-pulse" style={{ background: 'var(--bg2)', width: cellIdx === 0 ? '40%' : cellIdx === 5 ? '60%' : '30%' }} />
-                      </td>
-                    ))}
-                    <td className="py-3 px-5"><div className="h-3 w-16 rounded animate-pulse" style={{ background: 'var(--bg2)' }} /></td>
-                  </tr>
-                ))
-              : filtered.map((entry: ScanHistoryEntry) => {
-                  const st = statusStyle(entry.status)
-                  return (
-                    <tr key={entry.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td className="py-3 px-5 font-medium" style={{ color: 'var(--text-primary)' }}>{entry.repoName}</td>
-                      <td className="py-3 px-5" style={{ color: 'var(--text-secondary)' }}>{entry.branch}</td>
-                      <td className="py-3 px-5">
-                        <span className="px-2 py-0.5 rounded text-xs capitalize" style={{ background: st.bg, color: st.color }}>{entry.status}</span>
-                      </td>
-                      <td className="py-3 px-5" style={{ color: 'var(--text-primary)' }}>{entry.findingCount}</td>
-                      <td className="py-3 px-5" style={{ color: 'var(--text-secondary)' }}>{formatDuration(entry.durationMs)}</td>
-                      <td className="py-3 px-5" style={{ color: 'var(--text-muted)' }}>
-                        {entry.completedAt ? new Date(entry.completedAt).toLocaleString() : '—'}
-                      </td>
-                      <td className="py-3 px-5">
-                        <Link href={`/result/${entry.id}`} className="text-xs font-medium" style={{ color: 'var(--accent)' }}>View report →</Link>
-                      </td>
-                    </tr>
-                  )
-                })}
-          </tbody>
-        </table>
-      </div>
+      {/* Grouped repository cards */}
+      {!loading && (
+        <div className="flex flex-col gap-4">
+          {filtered.map((group) => {
+            const key = group.repoId || group.repoName
+            const isExpanded = expandedRepos.has(key)
+            const latestScan = group.scans[0]
+            const latestStatus = latestScan ? statusStyle(latestScan.status) : null
+            const totalFindings = group.scans.reduce((sum, s) => sum + s.findingCount, 0)
+
+            return (
+              <div
+                key={key}
+                className="rounded-xl overflow-hidden transition-all duration-200"
+                style={{ background: 'var(--bg1)', border: '1px solid var(--border)' }}
+              >
+                {/* Repo header — clickable to expand */}
+                <button
+                  onClick={() => toggleRepo(key)}
+                  className="w-full flex items-center justify-between px-5 py-4 transition-all text-left"
+                  style={{ background: isExpanded ? 'var(--bg2)' : 'transparent' }}
+                  onMouseEnter={(e) => { if (!isExpanded) (e.currentTarget as HTMLElement).style.background = 'var(--bg2)' }}
+                  onMouseLeave={(e) => { if (!isExpanded) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-bold tracking-tight truncate" style={{ color: 'var(--text-primary)' }}>
+                        {group.repoName}
+                      </h3>
+                      <div className="flex items-center gap-2 font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                        <span>{group.scans.length} scan{group.scans.length !== 1 ? 's' : ''}</span>
+                        <span>·</span>
+                        <span>{totalFindings} total finding{totalFindings !== 1 ? 's' : ''}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {latestStatus && (
+                      <span
+                        className="px-2.5 py-1 rounded-md font-mono text-[10px] capitalize tracking-wide"
+                        style={{ background: latestStatus.bg, color: latestStatus.color, border: `1px solid ${latestStatus.borderColor}` }}
+                      >
+                        {latestScan.status}
+                      </span>
+                    )}
+                    <svg
+                      width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round"
+                      className="transition-transform duration-200"
+                      style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </div>
+                </button>
+
+                {/* Expanded scan list */}
+                {isExpanded && (
+                  <div className="px-5 pb-4 pt-1 flex flex-col gap-2">
+                    {group.scans.map((scan, idx) => {
+                      const st = statusStyle(scan.status)
+                      return (
+                        <div
+                          key={scan.id}
+                          className="flex items-center justify-between px-4 py-3 rounded-lg transition-all"
+                          style={{ background: 'var(--bg2)', border: '1px solid var(--border)' }}
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <span
+                              className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] flex-shrink-0 font-mono font-bold"
+                              style={{ background: st.bg, color: st.color, border: `1px solid ${st.borderColor}` }}
+                            >
+                              {idx === 0 ? '●' : idx + 1}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span
+                                  className="px-2 py-0.5 rounded text-[10px] font-mono capitalize"
+                                  style={{ background: st.bg, color: st.color }}
+                                >
+                                  {scan.status}
+                                </span>
+                                <span className="font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                                  {scan.branch}
+                                </span>
+                                <span className="font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>·</span>
+                                <span className="font-mono text-[11px]" style={{ color: 'var(--text-primary)' }}>
+                                  {scan.findingCount} finding{scan.findingCount !== 1 ? 's' : ''}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1 font-mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                                <span>{formatDate(scan.completedAt || scan.startedAt)}</span>
+                                {scan.durationMs && (
+                                  <>
+                                    <span>·</span>
+                                    <span>{formatDuration(scan.durationMs)}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <Link
+                            href={`/result/${scan.id}`}
+                            className="text-[11px] font-medium ml-3 flex-shrink-0 transition-all"
+                            style={{ color: 'var(--accent)' }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.7' }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
+                          >
+                            View report →
+                          </Link>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {!loading && filtered.length === 0 && (
         <div className="py-20 text-center font-mono text-sm" style={{ color: 'var(--text-muted)' }}>
-          No scans match your filter.
+          No repositories match your filter.
         </div>
       )}
     </div>
